@@ -13,7 +13,6 @@ const Index = () => {
   const [extractedInfo, setExtractedInfo] = useState(null);
   const [rawApiOutput, setRawApiOutput] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [regeneratedImage, setRegeneratedImage] = useState(null);
   const { toast } = useToast();
   const { toPDF, targetRef } = usePDF({filename: 'property-listing.pdf'});
@@ -118,7 +117,6 @@ const Index = () => {
   };
 
   const generatePropertyImage = async (propertyData) => {
-    setIsGeneratingImage(true);
     try {
       const response = await fetch('https://api.openai.com/v1/images/generations', {
         method: 'POST',
@@ -156,8 +154,6 @@ const Index = () => {
         description: "物件画像の生成に失敗しました。",
         variant: "destructive",
       });
-    } finally {
-      setIsGeneratingImage(false);
     }
   };
 
@@ -210,12 +206,6 @@ const Index = () => {
             </pre>
           </CardContent>
         </Card>
-      )}
-      {isGeneratingImage && (
-        <div className="mt-4 text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-          <p className="mt-2">物件イメージを生成中です。しばらくお待ちください...</p>
-        </div>
       )}
       {regeneratedImage && (
         <Card className="mt-4">
