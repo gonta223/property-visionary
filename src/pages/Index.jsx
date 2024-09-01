@@ -12,6 +12,39 @@ const Index = () => {
   const [extractedInfo, setExtractedInfo] = useState(null);
   const { toast } = useToast();
 
+  const propertyFields = [
+    { key: 'rent', label: '家賃' },
+    { key: 'address', label: '住所' },
+    { key: 'size', label: '広さ' },
+    { key: 'layout', label: '間取り' },
+    { key: 'age', label: '築年数' },
+    { key: 'nearestStation', label: '最寄り駅' },
+    { key: 'floorPlan', label: '間取り図' },
+    { key: 'buildingType', label: '建物タイプ' },
+    { key: 'constructionDate', label: '建築年月' },
+    { key: 'availableDate', label: '入居可能日' },
+    { key: 'deposit', label: '敷金' },
+    { key: 'keyMoney', label: '礼金' },
+    { key: 'managementFee', label: '管理費' },
+    { key: 'parkingFee', label: '駐車場料金' },
+    { key: 'internetAvailability', label: 'インターネット設備' },
+    { key: 'petPolicy', label: 'ペット可否' },
+    { key: 'floorLevel', label: '階数' },
+    { key: 'totalFloors', label: '総階数' },
+    { key: 'orientation', label: '向き' },
+    { key: 'balcony', label: 'バルコニー' },
+    { key: 'airConditioning', label: 'エアコン' },
+    { key: 'securitySystem', label: 'セキュリティシステム' },
+    { key: 'elevatorAvailability', label: 'エレベーター' },
+    { key: 'bicycleParkingAvailability', label: '駐輪場' },
+    { key: 'contractType', label: '契約形態' },
+    { key: 'renewalFee', label: '更新料' },
+    { key: 'guarantorRequirement', label: '保証人要否' },
+    { key: 'insuranceRequirement', label: '火災保険要否' },
+    { key: 'keyFeatures', label: '物件の特徴' },
+    { key: 'surroundingEnvironment', label: '周辺環境' }
+  ];
+
   const handleApiKeyChange = (e) => {
     setApiKey(e.target.value);
   };
@@ -54,14 +87,14 @@ const Index = () => {
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: "gpt-4o-mini",
+          model: "gpt-4-vision-preview",
           messages: [
             {
               role: "user",
               content: [
                 {
                   type: "text",
-                  text: "この不動産物件画像から以下の情報を抽出してください：家賃、住所、広さ、間取り、築年数、最寄り駅。JSONフォーマットで出力してください。"
+                  text: `この不動産物件画像から以下の情報を抽出してください：${propertyFields.map(field => field.label).join('、')}。JSONフォーマットで出力してください。`
                 },
                 {
                   type: "image_url",
@@ -72,10 +105,14 @@ const Index = () => {
               ]
             }
           ],
-          max_tokens: 300,
+          max_tokens: 1000,
           response_format: { type: "json_object" }
         })
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       const data = await response.json();
       const extractedData = JSON.parse(data.choices[0].message.content);
@@ -87,9 +124,17 @@ const Index = () => {
       });
     } catch (error) {
       console.error('Error:', error);
+      let errorMessage = "情報の抽出に失敗しました。";
+      if (error.message.includes('401')) {
+        errorMessage = "APIキーが無効です。正しいAPIキーを入力してください。";
+      } else if (error.message.includes('404')) {
+        errorMessage = "APIエンドポイントが見つかりません。ネットワーク接続を確認してください。";
+      } else if (error.message.includes('429')) {
+        errorMessage = "APIリクエストの制限に達しました。しばらく待ってから再試行してください。";
+      }
       toast({
         title: "エラー",
-        description: "情報の抽出に失敗しました。",
+        description: errorMessage,
         variant: "destructive",
       });
     }
