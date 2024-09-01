@@ -54,7 +54,7 @@ const Index = () => {
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: "gpt-4-vision-preview",
+          model: "gpt-4o-mini",
           messages: [
             {
               role: "user",
@@ -77,10 +77,6 @@ const Index = () => {
         })
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
       const data = await response.json();
       const extractedData = JSON.parse(data.choices[0].message.content);
       setExtractedInfo(extractedData);
@@ -91,17 +87,9 @@ const Index = () => {
       });
     } catch (error) {
       console.error('Error:', error);
-      let errorMessage = "情報の抽出に失敗しました。";
-      if (error.message.includes('401')) {
-        errorMessage = "APIキーが無効です。正しいAPIキーを入力してください。";
-      } else if (error.message.includes('404')) {
-        errorMessage = "APIエンドポイントが見つかりません。ネットワーク接続を確認してください。";
-      } else if (error.message.includes('429')) {
-        errorMessage = "APIリクエストの制限に達しました。しばらく待ってから再試行してください。";
-      }
       toast({
         title: "エラー",
-        description: errorMessage,
+        description: "情報の抽出に失敗しました。",
         variant: "destructive",
       });
     }
