@@ -12,37 +12,6 @@ const Index = () => {
   const [extractedInfo, setExtractedInfo] = useState(null);
   const { toast } = useToast();
 
-  const propertyFields = [
-    { key: 'rent', label: '家賃' },
-    { key: 'address', label: '住所' },
-    { key: 'size', label: '広さ' },
-    { key: 'layout', label: '間取り' },
-    { key: 'age', label: '築年数' },
-    { key: 'nearestStation', label: '最寄り駅' },
-    { key: 'floorPlan', label: '間取り図' },
-    { key: 'buildingType', label: '建物タイプ' },
-    { key: 'constructionDate', label: '建築年月' },
-    { key: 'availableDate', label: '入居可能日' },
-    { key: 'deposit', label: '敷金' },
-    { key: 'keyMoney', label: '礼金' },
-    { key: 'managementFee', label: '管理費' },
-    { key: 'parkingFee', label: '駐車場料金' },
-    { key: 'internetAvailability', label: 'インターネット設備' },
-    { key: 'petPolicy', label: 'ペット可否' },
-    { key: 'floorLevel', label: '階数' },
-    { key: 'totalFloors', label: '総階数' },
-    { key: 'orientation', label: '向き' },
-    { key: 'balcony', label: 'バルコニー' },
-    { key: 'airConditioning', label: 'エアコン' },
-    { key: 'securitySystem', label: 'セキュリティ' },
-    { key: 'contractType', label: '契約形態' },
-    { key: 'renewalFee', label: '更新料' },
-    { key: 'guarantorRequirement', label: '保証人要否' },
-    { key: 'fireInsurance', label: '火災保険' },
-    { key: 'features', label: '特徴・設備' },
-    { key: 'surroundingEnvironment', label: '周辺環境' },
-  ];
-
   const handleApiKeyChange = (e) => {
     setApiKey(e.target.value);
   };
@@ -85,14 +54,14 @@ const Index = () => {
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: "gpt-4-vision-preview",
+          model: "gpt-4o-mini",
           messages: [
             {
               role: "user",
               content: [
                 {
                   type: "text",
-                  text: `この不動産物件画像から以下の情報を可能な限り抽出してください：${propertyFields.map(field => field.label).join('、')}。JSONフォーマットで出力してください。情報が不明な場合は、その項目を省略してください。`
+                  text: "この不動産物件画像から以下の情報を抽出してください：家賃、住所、広さ、間取り、築年数、最寄り駅。JSONフォーマットで出力してください。"
                 },
                 {
                   type: "image_url",
@@ -103,7 +72,7 @@ const Index = () => {
               ]
             }
           ],
-          max_tokens: 500,
+          max_tokens: 300,
           response_format: { type: "json_object" }
         })
       });
@@ -170,13 +139,11 @@ const Index = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {propertyFields.map(({ key, label }) => (
-                  extractedInfo[key] && (
-                    <TableRow key={key}>
-                      <TableCell>{label}</TableCell>
-                      <TableCell>{extractedInfo[key]}</TableCell>
-                    </TableRow>
-                  )
+                {Object.entries(extractedInfo).map(([key, value]) => (
+                  <TableRow key={key}>
+                    <TableCell>{key}</TableCell>
+                    <TableCell>{value}</TableCell>
+                  </TableRow>
                 ))}
               </TableBody>
             </Table>
