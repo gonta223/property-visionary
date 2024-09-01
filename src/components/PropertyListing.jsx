@@ -88,21 +88,19 @@ const PropertyListing = React.forwardRef(({ propertyInfo }, ref) => {
         <div className="col-span-5">
           <Card>
             <CardContent className="p-4">
-              <Table>
-                <TableBody>
-                  {mainInfo.map((key) => {
-                    if (propertyInfo[key] && propertyInfo[key] !== '情報なし') {
-                      return (
-                        <TableRow key={key}>
-                          <TableCell className="font-bold">{key}</TableCell>
-                          <TableCell>{propertyInfo[key]}</TableCell>
-                        </TableRow>
-                      );
-                    }
-                    return null;
-                  })}
-                </TableBody>
-              </Table>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                {mainInfo.map((key) => {
+                  if (propertyInfo[key] && propertyInfo[key] !== '情報なし') {
+                    return (
+                      <div key={key} className="mb-2">
+                        <p className="font-semibold">{key}</p>
+                        <p>{propertyInfo[key]}</p>
+                      </div>
+                    );
+                  }
+                  return null;
+                })}
+              </div>
             </CardContent>
           </Card>
         </div>
