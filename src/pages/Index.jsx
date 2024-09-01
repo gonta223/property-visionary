@@ -13,6 +13,7 @@ const Index = () => {
   const [extractedInfo, setExtractedInfo] = useState(null);
   const [rawApiOutput, setRawApiOutput] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [regeneratedImage, setRegeneratedImage] = useState(null);
   const { toast } = useToast();
   const { toPDF, targetRef } = usePDF({filename: 'property-listing.pdf'});
 
@@ -60,7 +61,7 @@ const Index = () => {
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: "gpt-4o",
+          model: "gpt-4-vision-preview",
           messages: [
             {
               role: "user",
@@ -96,6 +97,9 @@ const Index = () => {
       const extractedData = JSON.parse(data.choices[0].message.content);
       setExtractedInfo(extractedData);
 
+      // Generate the property image
+      await generatePropertyImage(extractedData);
+
       toast({
         title: "成功",
         description: "物件情報が抽出されました。",
@@ -109,6 +113,47 @@ const Index = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const generatePropertyImage = async (propertyData) => {
+    try {
+      const response = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "dall-e-3",
+          prompt: `Generate a photorealistic image of a ${propertyData['建物種別'] || '物件'} based on the following details:
+            Location: ${propertyData['住所'] || '不明'}
+            Building type: ${propertyData['建物種別'] || '不明'}
+            Number of floors: ${propertyData['階数'] || '不明'}
+            Age of building: ${propertyData['築年数'] || '不明'}
+            Features: ${propertyData['特徴や魅力的なポイント']?.join(', ') || '不明'}
+            Style: Modern Japanese architecture
+            Time: Daytime with clear sky
+            Perspective: Front view of the building
+            Do not include any text or numbers in the image.`,
+          n: 1,
+          size: "1024x1024"
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Image generation failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      setRegeneratedImage(data.data[0].url);
+    } catch (error) {
+      console.error('Error generating image:', error);
+      toast({
+        title: "エラー",
+        description: "物件画像の生成に失敗しました。",
+        variant: "destructive",
+      });
     }
   };
 
@@ -159,6 +204,16 @@ const Index = () => {
             <pre className="whitespace-pre-wrap bg-gray-100 p-4 rounded-md overflow-auto max-h-96">
               {rawApiOutput}
             </pre>
+          </CardContent>
+        </Card>
+      )}
+      {regeneratedImage && (
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle>生成された物件イメージ</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <img src={regeneratedImage} alt="Generated Property" className="w-full h-auto rounded-lg" />
           </CardContent>
         </Card>
       )}
