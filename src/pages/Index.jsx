@@ -57,22 +57,21 @@ const Index = () => {
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: "gpt-4-vision-preview",
+          model: "gpt-4",
           messages: [
             {
+              role: "system",
+              content: "You are an AI assistant specialized in extracting property information from text descriptions of real estate listings."
+            },
+            {
               role: "user",
-              content: [
-                {
-                  type: "text",
-                  text: "この不動産物件画像から以下の情報を抽出してください。情報が見つからない場合は「情報なし」と記入してください：家賃、管理費、共益費、敷金、礼金、住所、最寄駅、駅からの距離、建物種別、構造、階数、築年数、リフォーム年、向き、専有面積、間取り、バルコニー面積、設備（キッチン）、設備（バス・トイレ）、設備（収納）、設備（冷暖房）、設備（セキュリティ）、駐車場、バイク置き場、自転車置き場、ペット可否、契約期間、現況、引渡し時期、取引形態、備考、キャンペーン情報。JSONフォーマットで出力してください。"
-                },
-                {
-                  type: "image_url",
-                  image_url: {
-                    url: uploadedImage
-                  }
-                }
-              ]
+              content: `Please extract the following information from the property listing description. If the information is not available, write "情報なし":
+              家賃, 管理費, 共益費, 敷金, 礼金, 住所, 最寄駅, 駅からの距離, 建物種別, 構造, 階数, 築年数, リフォーム年, 向き, 専有面積, 間取り, バルコニー面積, 設備（キッチン）, 設備（バス・トイレ）, 設備（収納）, 設備（冷暖房）, 設備（セキュリティ）, 駐車場, バイク置き場, 自転車置き場, ペット可否, 契約期間, 現況, 引渡し時期, 取引形態, 備考, キャンペーン情報
+              
+              Here's the property listing description:
+              ${uploadedImage}
+              
+              Please provide the extracted information in JSON format.`
             }
           ],
           max_tokens: 1000,
