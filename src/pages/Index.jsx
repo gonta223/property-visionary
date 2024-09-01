@@ -78,6 +78,12 @@ const Index = () => {
     }
 
     try {
+      setExtractedInfo(null); // Reset previous results
+      toast({
+        title: "処理中",
+        description: "物件情報を抽出しています...",
+      });
+
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -108,7 +114,16 @@ const Index = () => {
         })
       });
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
+    
+      if (!data.choices || !data.choices[0] || !data.choices[0].message || !data.choices[0].message.content) {
+        throw new Error('Unexpected API response structure');
+      }
+
       const extractedData = JSON.parse(data.choices[0].message.content);
       setExtractedInfo(extractedData);
 
@@ -120,7 +135,7 @@ const Index = () => {
       console.error('Error:', error);
       toast({
         title: "エラー",
-        description: "情報の抽出に失敗しました。",
+        description: `情報の抽出に失敗しました: ${error.message}`,
         variant: "destructive",
       });
     }
