@@ -6,11 +6,13 @@ import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import PropertyListing from '../components/PropertyListing';
 import { usePDF } from 'react-to-pdf';
+import { Textarea } from "@/components/ui/textarea"
 
 const Index = () => {
   const [apiKey, setApiKey] = useState('');
   const [uploadedImage, setUploadedImage] = useState(null);
   const [extractedInfo, setExtractedInfo] = useState(null);
+  const [rawApiOutput, setRawApiOutput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { toPDF, targetRef } = usePDF({filename: 'property-listing.pdf'});
@@ -22,6 +24,14 @@ const Index = () => {
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({
+          title: "エラー",
+          description: "ファイルサイズは5MB以下にしてください。",
+          variant: "destructive",
+        });
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (e) => {
         setUploadedImage(e.target.result);
@@ -50,6 +60,8 @@ const Index = () => {
     }
 
     setIsLoading(true);
+    setRawApiOutput('');
+    setExtractedInfo(null);
 
     try {
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -59,7 +71,7 @@ const Index = () => {
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: "gpt-4o",
+          model: "gpt-4-vision-preview",
           messages: [
             {
               role: "user",
@@ -77,8 +89,7 @@ const Index = () => {
               ]
             }
           ],
-          max_tokens: 2000,
-          response_format: { type: "json_object" }
+          max_tokens: 4000,
         })
       });
 
@@ -91,13 +102,24 @@ const Index = () => {
         throw new Error('Unexpected response structure from API');
       }
 
-      const extractedData = JSON.parse(data.choices[0].message.content);
-      setExtractedInfo(extractedData);
+      const rawOutput = data.choices[0].message.content;
+      setRawApiOutput(rawOutput);
 
-      toast({
-        title: "成功",
-        description: "物件情報が抽出されました。",
-      });
+      try {
+        const extractedData = JSON.parse(rawOutput);
+        setExtractedInfo(extractedData);
+        toast({
+          title: "成功",
+          description: "物件情報が抽出されました。",
+        });
+      } catch (parseError) {
+        console.error('Error parsing JSON:', parseError);
+        toast({
+          title: "警告",
+          description: "APIの出力をJSONとして解析できませんでした。生の出力を確認してください。",
+          variant: "warning",
+        });
+      }
     } catch (error) {
       console.error('Error:', error);
       toast({
@@ -147,6 +169,20 @@ const Index = () => {
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
           <p className="mt-2">物件情報を抽出中です。しばらくお待ちください...</p>
         </div>
+      )}
+      {rawApiOutput && (
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle>GPT API 生出力</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Textarea
+              value={rawApiOutput}
+              readOnly
+              className="w-full h-64 overflow-auto"
+            />
+          </CardContent>
+        </Card>
       )}
       {extractedInfo && (
         <>
