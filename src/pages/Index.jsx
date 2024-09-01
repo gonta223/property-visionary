@@ -115,16 +115,27 @@ const Index = () => {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        if (response.status === 404) {
+          throw new Error('APIエンドポイントが見つかりません。APIキーが正しいか確認してください。');
+        } else {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
       }
 
       const data = await response.json();
-    
+  
       if (!data.choices || !data.choices[0] || !data.choices[0].message || !data.choices[0].message.content) {
-        throw new Error('Unexpected API response structure');
+        throw new Error('予期せぬAPIレスポンス構造です。サポートに連絡してください。');
       }
 
-      const extractedData = JSON.parse(data.choices[0].message.content);
+      let extractedData;
+      try {
+        extractedData = JSON.parse(data.choices[0].message.content);
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        throw new Error('APIからの応答をパースできませんでした。');
+      }
+
       setExtractedInfo(extractedData);
 
       toast({
