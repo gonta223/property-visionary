@@ -5,11 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import PropertyListing from '../components/PropertyListing';
 
 const Index = () => {
   const [apiKey, setApiKey] = useState('');
   const [uploadedImage, setUploadedImage] = useState(null);
   const [extractedInfo, setExtractedInfo] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   const handleApiKeyChange = (e) => {
@@ -45,6 +47,8 @@ const Index = () => {
       });
       return;
     }
+
+    setIsLoading(true);
 
     try {
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -92,6 +96,8 @@ const Index = () => {
         description: "情報の抽出に失敗しました。",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -124,31 +130,42 @@ const Index = () => {
           )}
         </CardContent>
       </Card>
-      <Button onClick={handleSubmit}>情報抽出</Button>
+      <Button onClick={handleSubmit} disabled={isLoading}>
+        {isLoading ? "処理中..." : "情報抽出"}
+      </Button>
+      {isLoading && (
+        <div className="mt-4 text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          <p className="mt-2">物件情報を抽出中です。しばらくお待ちください...</p>
+        </div>
+      )}
       {extractedInfo && (
-        <Card className="mt-4">
-          <CardHeader>
-            <CardTitle>抽出された物件情報</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>項目</TableHead>
-                  <TableHead>情報</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {Object.entries(extractedInfo).map(([key, value]) => (
-                  <TableRow key={key}>
-                    <TableCell>{key}</TableCell>
-                    <TableCell>{value || '情報なし'}</TableCell>
+        <>
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle>抽出された物件情報</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>項目</TableHead>
+                    <TableHead>情報</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                </TableHeader>
+                <TableBody>
+                  {Object.entries(extractedInfo).map(([key, value]) => (
+                    <TableRow key={key}>
+                      <TableCell>{key}</TableCell>
+                      <TableCell>{value || '情報なし'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+          <PropertyListing propertyInfo={extractedInfo} />
+        </>
       )}
     </div>
   );
