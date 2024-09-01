@@ -94,7 +94,7 @@ const Index = () => {
               content: [
                 {
                   type: "text",
-                  text: "この不動産物件画像から以下の情報を抽出してください：家賃、住所、広さ、間取り、築年数、最寄り駅。JSONフォーマットで出力してください。"
+                  text: "この不動産物件画像から以下の情報を抽出してください：家賃、住所、広さ、間取り、築年数、最寄り駅、間取り図、建物タイプ、建築年月、入居可能日、敷金、礼金、管理費、駐車場料金、インターネット設備、ペット可否、階数、総階数、向き、バルコニー、エアコン、セキュリティシステム、エレベーター、駐輪場、契約形態、更新料、保証人要否、火災保険要否、物件の特徴、周辺環境。JSONフォーマットで出力してください。"
                 },
                 {
                   type: "image_url",
@@ -105,8 +105,7 @@ const Index = () => {
               ]
             }
           ],
-          max_tokens: 1000,
-          response_format: { type: "json_object" }
+          max_tokens: 1000
         })
       });
 
@@ -124,17 +123,9 @@ const Index = () => {
       });
     } catch (error) {
       console.error('Error:', error);
-      let errorMessage = "情報の抽出に失敗しました。";
-      if (error.message.includes('401')) {
-        errorMessage = "APIキーが無効です。正しいAPIキーを入力してください。";
-      } else if (error.message.includes('404')) {
-        errorMessage = "APIエンドポイントが見つかりません。ネットワーク接続を確認してください。";
-      } else if (error.message.includes('429')) {
-        errorMessage = "APIリクエストの制限に達しました。しばらく待ってから再試行してください。";
-      }
       toast({
         title: "エラー",
-        description: errorMessage,
+        description: "情報の抽出に失敗しました。",
         variant: "destructive",
       });
     }
@@ -184,10 +175,10 @@ const Index = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {Object.entries(extractedInfo).map(([key, value]) => (
+                {propertyFields.map(({ key, label }) => (
                   <TableRow key={key}>
-                    <TableCell>{key}</TableCell>
-                    <TableCell>{value}</TableCell>
+                    <TableCell>{label}</TableCell>
+                    <TableCell>{extractedInfo[key] || '情報なし'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
