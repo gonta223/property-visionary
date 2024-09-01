@@ -129,6 +129,8 @@ const Index = () => {
           throw new Error('無効なAPIキーです。正しいAPIキーを入力してください。');
         } else if (response.status === 404) {
           throw new Error('APIエンドポイントが見つかりません。ネットワーク接続を確認してください。');
+        } else if (response.status === 429) {
+          throw new Error('APIリクエスト制限に達しました。しばらく待ってから再試行してください。');
         } else {
           throw new Error(`APIエラー: ${response.status} ${response.statusText}`);
         }
@@ -156,9 +158,13 @@ const Index = () => {
       });
     } catch (error) {
       console.error('Error:', error);
+      let errorMessage = error.message;
+      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+        errorMessage = 'ネットワークエラーが発生しました。インターネット接続を確認してください。';
+      }
       toast({
         title: "エラー",
-        description: `情報の抽出に失敗しました: ${error.message}`,
+        description: `情報の抽出に失敗しました: ${errorMessage}`,
         variant: "destructive",
       });
     }
