@@ -13,6 +13,8 @@ const Index = () => {
   const [extractedInfo, setExtractedInfo] = useState(null);
   const [rawApiOutput, setRawApiOutput] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [generatedImage, setGeneratedImage] = useState(null);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const { toast } = useToast();
   const { toPDF, targetRef } = usePDF({filename: 'property-listing.pdf'});
 
@@ -60,7 +62,7 @@ const Index = () => {
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: "gpt-4o",
+          model: "gpt-4-vision-preview",
           messages: [
             {
               role: "user",
@@ -112,6 +114,64 @@ const Index = () => {
     }
   };
 
+  const generatePropertyImage = async () => {
+    if (!apiKey || !extractedInfo) {
+      toast({
+        title: "エラー",
+        description: "APIキーと抽出された物件情報が必要です。",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGeneratingImage(true);
+
+    try {
+      const prompt = `以下の特徴を持つ日本の不動産物件の外観画像を生成してください：
+        物件タイプ: ${extractedInfo['建物種別'] || '不明'}
+        階数: ${extractedInfo['階数'] || '不明'}
+        築年数: ${extractedInfo['築年数'] || '不明'}
+        特徴:
+        ${extractedInfo['特徴や魅力的なポイント'] ? extractedInfo['特徴や魅力的なポイント'].join(', ') : '特徴なし'}
+        スタイル: 写実的、昼間の光景`;
+
+      const response = await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "dall-e-3",
+          prompt: prompt,
+          n: 1,
+          size: "1024x1024"
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Image generation failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      setGeneratedImage(data.data[0].url);
+
+      toast({
+        title: "成功",
+        description: "物件画像が生成されました。",
+      });
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "エラー",
+        description: `画像生成に失敗しました: ${error.message}`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
+
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-bold mb-4">不動産物件情報抽出ツール</h1>
@@ -159,6 +219,29 @@ const Index = () => {
             <pre className="whitespace-pre-wrap bg-gray-100 p-4 rounded-md overflow-auto max-h-96">
               {rawApiOutput}
             </pre>
+          </CardContent>
+        </Card>
+      )}
+      {extractedInfo && (
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle>物件画像生成</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={generatePropertyImage} disabled={isGeneratingImage}>
+              {isGeneratingImage ? "生成中..." : "物件画像を生成"}
+            </Button>
+            {isGeneratingImage && (
+              <div className="mt-4 text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                <p className="mt-2">物件画像を生成中です。しばらくお待ちください...</p>
+              </div>
+            )}
+            {generatedImage && (
+              <div className="mt-4">
+                <img src={generatedImage} alt="Generated Property" className="max-w-full h-auto rounded-lg shadow-lg" />
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
