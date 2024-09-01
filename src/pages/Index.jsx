@@ -119,8 +119,7 @@ const Index = () => {
               ]
             }
           ],
-          max_tokens: 500,
-          response_format: { type: "json_object" }
+          max_tokens: 500
         })
       });
 
