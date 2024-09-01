@@ -57,7 +57,7 @@ const Index = () => {
           'Authorization': `Bearer ${apiKey}`
         },
         body: JSON.stringify({
-          model: "gpt-4-vision-preview",
+          model: "gpt-4",
           messages: [
             {
               role: "user",
@@ -80,7 +80,16 @@ const Index = () => {
         })
       });
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
       const data = await response.json();
+      
+      if (!data.choices || !data.choices[0] || !data.choices[0].message || !data.choices[0].message.content) {
+        throw new Error('Unexpected response structure from API');
+      }
+
       const extractedData = JSON.parse(data.choices[0].message.content);
       setExtractedInfo(extractedData);
 
@@ -92,7 +101,7 @@ const Index = () => {
       console.error('Error:', error);
       toast({
         title: "エラー",
-        description: "情報の抽出に失敗しました。",
+        description: `情報の抽出に失敗しました: ${error.message}`,
         variant: "destructive",
       });
     } finally {
