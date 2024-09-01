@@ -4,11 +4,12 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 const Index = () => {
   const [apiKey, setApiKey] = useState('');
   const [uploadedImage, setUploadedImage] = useState(null);
-  const [generatedImage, setGeneratedImage] = useState(null);
+  const [extractedInfo, setExtractedInfo] = useState(null);
   const { toast } = useToast();
 
   const handleApiKeyChange = (e) => {
@@ -45,20 +46,58 @@ const Index = () => {
       return;
     }
 
-    // TODO: OpenAI APIを使用して画像認識と文字起こしを行う
-    // TODO: 抽出した情報を元に新しい物件画像を生成する
-    // 仮の実装として、アップロードされた画像をそのまま表示
-    setGeneratedImage(uploadedImage);
+    try {
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: "この不動産物件画像から以下の情報を抽出してください：家賃、住所、広さ、間取り、築年数、最寄り駅。JSONフォーマットで出力してください。"
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: uploadedImage
+                  }
+                }
+              ]
+            }
+          ],
+          max_tokens: 300,
+          response_format: { type: "json_object" }
+        })
+      });
 
-    toast({
-      title: "成功",
-      description: "新しい物件画像が生成されました。",
-    });
+      const data = await response.json();
+      const extractedData = JSON.parse(data.choices[0].message.content);
+      setExtractedInfo(extractedData);
+
+      toast({
+        title: "成功",
+        description: "物件情報が抽出されました。",
+      });
+    } catch (error) {
+      console.error('Error:', error);
+      toast({
+        title: "エラー",
+        description: "情報の抽出に失敗しました。",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">不動産物件画像生成ツール</h1>
+      <h1 className="text-2xl font-bold mb-4">不動産物件情報抽出ツール</h1>
       <Card className="mb-4">
         <CardHeader>
           <CardTitle>OpenAI APIキー</CardTitle>
@@ -85,14 +124,29 @@ const Index = () => {
           )}
         </CardContent>
       </Card>
-      <Button onClick={handleSubmit}>画像生成</Button>
-      {generatedImage && (
+      <Button onClick={handleSubmit}>情報抽出</Button>
+      {extractedInfo && (
         <Card className="mt-4">
           <CardHeader>
-            <CardTitle>生成された物件画像</CardTitle>
+            <CardTitle>抽出された物件情報</CardTitle>
           </CardHeader>
           <CardContent>
-            <img src={generatedImage} alt="Generated" className="max-w-full h-auto" />
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>項目</TableHead>
+                  <TableHead>情報</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {Object.entries(extractedInfo).map(([key, value]) => (
+                  <TableRow key={key}>
+                    <TableCell>{key}</TableCell>
+                    <TableCell>{value}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       )}
