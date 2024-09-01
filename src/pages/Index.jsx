@@ -68,6 +68,16 @@ const Index = () => {
       return;
     }
 
+    // Check API key format
+    if (!apiKey.startsWith('sk-') || apiKey.length < 20) {
+      toast({
+        title: "エラー",
+        description: "無効なAPIキー形式です。正しいAPIキーを入力してください。",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!uploadedImage) {
       toast({
         title: "エラー",
@@ -115,15 +125,17 @@ const Index = () => {
       });
 
       if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error('APIエンドポイントが見つかりません。APIキーが正しいか確認してください。');
+        if (response.status === 401) {
+          throw new Error('無効なAPIキーです。正しいAPIキーを入力してください。');
+        } else if (response.status === 404) {
+          throw new Error('APIエンドポイントが見つかりません。ネットワーク接続を確認してください。');
         } else {
-          throw new Error(`HTTP error! status: ${response.status}`);
+          throw new Error(`APIエラー: ${response.status} ${response.statusText}`);
         }
       }
 
       const data = await response.json();
-  
+
       if (!data.choices || !data.choices[0] || !data.choices[0].message || !data.choices[0].message.content) {
         throw new Error('予期せぬAPIレスポンス構造です。サポートに連絡してください。');
       }
@@ -133,7 +145,7 @@ const Index = () => {
         extractedData = JSON.parse(data.choices[0].message.content);
       } catch (parseError) {
         console.error('JSON parse error:', parseError);
-        throw new Error('APIからの応答をパースできませんでした。');
+        throw new Error('APIからの応答をパースできませんでした。サポートに連絡してください。');
       }
 
       setExtractedInfo(extractedData);
