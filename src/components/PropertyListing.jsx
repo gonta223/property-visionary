@@ -5,18 +5,17 @@ import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 const PropertyListing = ({ propertyInfo }) => {
   if (!propertyInfo) return null;
 
-  const mainInfo = ['家賃', '管理費', '敷金', '礼金', '住所', '最寄駅', '駅からの距離', '間取り'];
-  const detailInfo = Object.keys(propertyInfo).filter(key => !mainInfo.includes(key));
+  const mainInfo = ['最寄駅', '間取り', '敷金/礼金', '建物種別', '構造', '階数', '築年数', '専有面積'];
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-lg max-w-4xl mx-auto mt-8">
+      <div className="bg-black text-white p-2 mb-4">
+        <h2 className="text-2xl font-bold">賃貸マンション</h2>
+        <h3 className="text-xl">{propertyInfo['名称'] || 'X-OVER21 覚王山'}</h3>
+      </div>
       <div className="grid grid-cols-12 gap-4">
         {/* Left column */}
         <div className="col-span-8">
-          <div className="bg-black text-white p-2 mb-4">
-            <h2 className="text-2xl font-bold">賃貸マンション</h2>
-            <h3 className="text-xl">{propertyInfo['名称'] || 'X-OVER21 覚王山'}</h3>
-          </div>
           <div className="flex justify-between items-center mb-4">
             <div className="text-3xl font-bold">
               家賃 {propertyInfo['家賃'] || '59,000円'}
@@ -50,19 +49,7 @@ const PropertyListing = ({ propertyInfo }) => {
             <CardContent className="p-4">
               <Table>
                 <TableBody>
-                  <TableRow>
-                    <TableCell className="font-bold">最寄駅</TableCell>
-                    <TableCell>{propertyInfo['最寄駅'] || '覚王山'}/{propertyInfo['駅からの距離'] || '徒歩6分'}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-bold">間取り</TableCell>
-                    <TableCell>{propertyInfo['間取り'] || '1DK(8.5帖)'}</TableCell>
-                  </TableRow>
-                  <TableRow>
-                    <TableCell className="font-bold">敷金/礼金</TableCell>
-                    <TableCell>{propertyInfo['敷金'] || '敷金1ヶ月'}/{propertyInfo['礼金'] || '礼金0ヶ月'}</TableCell>
-                  </TableRow>
-                  {detailInfo.map((key) => (
+                  {mainInfo.map((key) => (
                     <TableRow key={key}>
                       <TableCell className="font-bold">{key}</TableCell>
                       <TableCell>{propertyInfo[key] || '情報なし'}</TableCell>
