@@ -94,7 +94,7 @@ const Index = () => {
               content: [
                 {
                   type: "text",
-                  text: `この不動産物件画像から以下の情報を抽出してください：${propertyFields.map(field => field.label).join('、')}。JSONフォーマットで出力してください。`
+                  text: "この不動産物件画像から以下の情報を抽出してください：家賃、住所、広さ、間取り、築年数、最寄り駅。JSONフォーマットで出力してください。"
                 },
                 {
                   type: "image_url",
