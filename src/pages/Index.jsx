@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,7 +11,6 @@ const Index = () => {
   const [apiKey, setApiKey] = useState('');
   const [uploadedImage, setUploadedImage] = useState(null);
   const [extractedInfo, setExtractedInfo] = useState(null);
-  const [rawApiOutput, setRawApiOutput] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const { toPDF, targetRef } = usePDF({filename: 'property-listing.pdf'});
@@ -78,7 +77,8 @@ const Index = () => {
               ]
             }
           ],
-          max_tokens: 2000
+          max_tokens: 2000,
+          response_format: { type: "json_object" }
         })
       });
 
@@ -87,8 +87,6 @@ const Index = () => {
       }
 
       const data = await response.json();
-      setRawApiOutput(JSON.stringify(data, null, 2));
-
       if (!data.choices || !data.choices[0] || !data.choices[0].message || !data.choices[0].message.content) {
         throw new Error('Unexpected response structure from API');
       }
@@ -149,18 +147,6 @@ const Index = () => {
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
           <p className="mt-2">物件情報を抽出中です。しばらくお待ちください...</p>
         </div>
-      )}
-      {rawApiOutput && (
-        <Card className="mt-4">
-          <CardHeader>
-            <CardTitle>API出力（生データ）</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <pre className="whitespace-pre-wrap bg-gray-100 p-4 rounded-md overflow-auto max-h-96">
-              {rawApiOutput}
-            </pre>
-          </CardContent>
-        </Card>
       )}
       {extractedInfo && (
         <>
