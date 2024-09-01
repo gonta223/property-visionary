@@ -5,41 +5,41 @@ import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 const PropertyListing = ({ propertyInfo }) => {
   if (!propertyInfo) return null;
 
-  const mainInfo = ['最寄駅', '間取り', '敷金/礼金', '建物種別', '構造', '階数', '築年数', '専有面積'];
+  const mainInfo = [
+    '最寄駅', '間取り', '敷金', '礼金', '建物種別', '構造', '階数', '築年数', '専有面積',
+    '向き', 'バルコニー面積', '設備（キッチン）', '設備（バス・トイレ）', '設備（収納）',
+    '設備（冷暖房）', '設備（セキュリティ）', '駐車場', 'バイク置き場', '自転車置き場',
+    'ペット可否', '契約期間', '現況', '引渡し時期', '取引形態', '備考'
+  ];
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-lg max-w-4xl mx-auto mt-8">
       <div className="bg-black text-white p-2 mb-4">
-        <h2 className="text-2xl font-bold">賃貸マンション</h2>
-        <h3 className="text-xl">{propertyInfo['名称'] || 'X-OVER21 覚王山'}</h3>
+        <h2 className="text-2xl font-bold">賃貸{propertyInfo['建物種別'] || 'マンション'}</h2>
+        <h3 className="text-xl">{propertyInfo['名称'] || '物件名'}</h3>
       </div>
       <div className="grid grid-cols-12 gap-4">
         {/* Left column */}
         <div className="col-span-8">
           <div className="flex justify-between items-center mb-4">
             <div className="text-3xl font-bold">
-              家賃 {propertyInfo['家賃'] || '59,000円'}
-              <span className="text-sm font-normal ml-2">（共益費{propertyInfo['管理費'] || '5,200円'}）</span>
-            </div>
-            <div className="bg-yellow-300 p-2 text-sm font-bold">
-              礼金0円キャンペーン！<br />
-              転勤・新入生応援！
+              家賃 {propertyInfo['家賃'] || '情報なし'}
+              <span className="text-sm font-normal ml-2">
+                （{propertyInfo['管理費'] ? '管理費' : '共益費'} {propertyInfo['管理費'] || propertyInfo['共益費'] || '情報なし'}）
+              </span>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4 mb-4">
             <img src={propertyInfo['外観画像'] || '/placeholder.svg'} alt="建物外観" className="w-full h-40 object-cover" />
-            <div className="grid grid-cols-2 gap-2">
-              <img src={propertyInfo['内装画像1'] || '/placeholder.svg'} alt="内装1" className="w-full h-19 object-cover" />
-              <img src={propertyInfo['内装画像2'] || '/placeholder.svg'} alt="内装2" className="w-full h-19 object-cover" />
-              <img src={propertyInfo['内装画像3'] || '/placeholder.svg'} alt="内装3" className="w-full h-19 object-cover" />
-              <img src={propertyInfo['内装画像4'] || '/placeholder.svg'} alt="内装4" className="w-full h-19 object-cover" />
-            </div>
+            <img src={propertyInfo['内装画像1'] || '/placeholder.svg'} alt="内装" className="w-full h-40 object-cover" />
           </div>
           <div className="mb-4">
-            <img src={propertyInfo['間取り図'] || '/placeholder.svg'} alt="間取り図" className="w-full h-48 object-contain" />
+            <p className="font-bold">住所</p>
+            <p>{propertyInfo['住所'] || '情報なし'}</p>
           </div>
-          <div>
-            <img src={propertyInfo['地図'] || '/placeholder.svg'} alt="地図" className="w-full h-48 object-contain" />
+          <div className="mb-4">
+            <p className="font-bold">アクセス</p>
+            <p>{propertyInfo['最寄駅']} {propertyInfo['駅からの距離']}</p>
           </div>
         </div>
         
@@ -62,10 +62,10 @@ const PropertyListing = ({ propertyInfo }) => {
         </div>
       </div>
       <div className="mt-4 text-sm">
-        <p>株式会社〇〇不動産</p>
-        <p>TEL: 000-0000-0000 FAX: 000-0000-0000</p>
-        <p>愛知県名古屋市中区〇〇-〇-〇</p>
-        <p>国土交通大臣免許(0)第00000号</p>
+        <p>取扱不動産会社: {propertyInfo['取扱不動産会社'] || '情報なし'}</p>
+        <p>TEL: {propertyInfo['電話番号'] || '情報なし'}</p>
+        <p>住所: {propertyInfo['不動産会社住所'] || '情報なし'}</p>
+        <p>免許番号: {propertyInfo['免許番号'] || '情報なし'}</p>
       </div>
     </div>
   );
