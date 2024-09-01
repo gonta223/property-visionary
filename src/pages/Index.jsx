@@ -160,6 +160,8 @@ const Index = () => {
       let errorMessage = error.message;
       if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
         errorMessage = 'ネットワークエラーが発生しました。インターネット接続を確認してください。';
+      } else if (error.message.includes('api.openai.com')) {
+        errorMessage = 'OpenAI APIとの通信に問題が発生しました。APIの状態を確認してください。';
       }
       toast({
         title: "エラー",
