@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
 import PropertyListing from '../components/PropertyListing';
+import { usePDF } from 'react-to-pdf';
 
 const Index = () => {
   const [apiKey, setApiKey] = useState('');
@@ -12,6 +13,7 @@ const Index = () => {
   const [extractedInfo, setExtractedInfo] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { toPDF, targetRef } = usePDF({filename: 'property-listing.pdf'});
 
   const handleApiKeyChange = (e) => {
     setApiKey(e.target.value);
@@ -146,7 +148,12 @@ const Index = () => {
           <p className="mt-2">物件情報を抽出中です。しばらくお待ちください...</p>
         </div>
       )}
-      {extractedInfo && <PropertyListing propertyInfo={extractedInfo} />}
+      {extractedInfo && (
+        <>
+          <PropertyListing ref={targetRef} propertyInfo={extractedInfo} />
+          <Button onClick={() => toPDF()} className="mt-4">PDFとして保存</Button>
+        </>
+      )}
     </div>
   );
 };

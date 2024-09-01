@@ -4,7 +4,7 @@ import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 
-const PropertyListing = ({ propertyInfo }) => {
+const PropertyListing = React.forwardRef(({ propertyInfo }, ref) => {
   if (!propertyInfo) return null;
 
   const mainInfo = [
@@ -31,7 +31,7 @@ const PropertyListing = ({ propertyInfo }) => {
   ];
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-lg max-w-6xl mx-auto mt-8">
+    <div ref={ref} className="bg-white p-6 rounded-lg shadow-lg max-w-6xl mx-auto mt-8">
       <div className="bg-gray-800 text-white p-4 mb-6 rounded-t-lg">
         <h2 className="text-2xl font-bold">賃貸{propertyInfo['建物種別'] || '物件'}</h2>
         <h3 className="text-xl">{propertyInfo['物件名称'] || '物件名称不明'}</h3>
@@ -90,12 +90,17 @@ const PropertyListing = ({ propertyInfo }) => {
             <CardContent className="p-4">
               <Table>
                 <TableBody>
-                  {mainInfo.map((key) => (
-                    <TableRow key={key}>
-                      <TableCell className="font-bold">{key}</TableCell>
-                      <TableCell>{propertyInfo[key] || '情報なし'}</TableCell>
-                    </TableRow>
-                  ))}
+                  {mainInfo.map((key) => {
+                    if (propertyInfo[key] && propertyInfo[key] !== '情報なし') {
+                      return (
+                        <TableRow key={key}>
+                          <TableCell className="font-bold">{key}</TableCell>
+                          <TableCell>{propertyInfo[key]}</TableCell>
+                        </TableRow>
+                      );
+                    }
+                    return null;
+                  })}
                 </TableBody>
               </Table>
             </CardContent>
@@ -104,13 +109,15 @@ const PropertyListing = ({ propertyInfo }) => {
       </div>
       <div className="mt-6 p-4 bg-gray-100 rounded-lg text-sm">
         <h4 className="font-bold mb-2">取扱不動産会社情報</h4>
-        <p>会社名: {propertyInfo['取扱不動産会社'] || '情報なし'}</p>
-        <p>TEL: {propertyInfo['電話番号'] || '情報なし'}</p>
-        <p>住所: {propertyInfo['不動産会社住所'] || '情報なし'}</p>
-        <p>免許番号: {propertyInfo['免許番号'] || '情報なし'}</p>
+        {['取扱不動産会社', '電話番号', '不動産会社住所', '免許番号'].map((key) => {
+          if (propertyInfo[key] && propertyInfo[key] !== '情報なし') {
+            return <p key={key}>{key}: {propertyInfo[key]}</p>;
+          }
+          return null;
+        })}
       </div>
     </div>
   );
-};
+});
 
 export default PropertyListing;
