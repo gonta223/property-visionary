@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 
 const PropertyListing = ({ propertyInfo }) => {
   if (!propertyInfo) return null;
@@ -15,41 +16,59 @@ const PropertyListing = ({ propertyInfo }) => {
 
   const formatFee = (fee, type) => {
     if (fee && fee !== '情報なし') {
-      return `${type} ${fee}`;
+      return `${fee}`;
     }
     return null;
   };
 
   const managementFee = formatFee(propertyInfo['管理費'], '管理費') || formatFee(propertyInfo['共益費'], '共益費') || '情報なし';
 
+  const images = [
+    propertyInfo['外観画像'] || '/placeholder.svg',
+    propertyInfo['内装画像1'] || '/placeholder.svg',
+    propertyInfo['内装画像2'] || '/placeholder.svg',
+    propertyInfo['内装画像3'] || '/placeholder.svg',
+  ].filter(img => img !== '/placeholder.svg');
+
   return (
     <div className="bg-white p-6 rounded-lg shadow-lg max-w-6xl mx-auto mt-8">
       <div className="bg-gray-800 text-white p-4 mb-6 rounded-t-lg">
-        <h2 className="text-2xl font-bold">賃貸{propertyInfo['建物種別'] || 'マンション'}</h2>
-        <h3 className="text-xl">{propertyInfo['名称'] || '物件名'}</h3>
+        <h2 className="text-2xl font-bold">{propertyInfo['建物種別'] || '賃貸マンション'}</h2>
+        <h3 className="text-xl">{propertyInfo['名称'] || 'X-OVER21 覚王山'}</h3>
       </div>
       <div className="grid grid-cols-12 gap-6">
         {/* Left column */}
         <div className="col-span-7">
           <div className="flex justify-between items-center mb-4">
             <div className="text-3xl font-bold">
-              家賃 {propertyInfo['家賃'] || '情報なし'}
+              家賃 {propertyInfo['家賃'] || '59,000円'}
               <span className="text-sm font-normal ml-2">
                 （{managementFee}）
               </span>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <img src={propertyInfo['外観画像'] || '/placeholder.svg'} alt="建物外観" className="w-full h-48 object-cover rounded-lg" />
-            <img src={propertyInfo['内装画像1'] || '/placeholder.svg'} alt="内装" className="w-full h-48 object-cover rounded-lg" />
-          </div>
+          <Carousel className="w-full max-w-xs mx-auto mb-6">
+            <CarouselContent>
+              {images.map((src, index) => (
+                <CarouselItem key={index}>
+                  <img src={src} alt={`物件画像 ${index + 1}`} className="w-full h-48 object-cover rounded-lg" />
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            <CarouselPrevious />
+            <CarouselNext />
+          </Carousel>
           <div className="mb-4">
             <p className="font-bold text-lg mb-1">住所</p>
-            <p>{propertyInfo['住所'] || '情報なし'}</p>
+            <p>{propertyInfo['住所'] || '愛知県名古屋市千種区覚王山2-1'}</p>
           </div>
           <div className="mb-4">
             <p className="font-bold text-lg mb-1">アクセス</p>
-            <p>{propertyInfo['最寄駅']} {propertyInfo['駅からの距離']}</p>
+            <p>{propertyInfo['最寄駅']} {propertyInfo['駅からの距離'] || '徒歩6分'}</p>
+          </div>
+          <div className="mb-4">
+            <p className="font-bold text-lg mb-1">キャンペーン情報</p>
+            <p>{propertyInfo['キャンペーン'] || '礼金0円キャンペーン実施中（5月末まで）'}</p>
           </div>
         </div>
         
@@ -73,10 +92,10 @@ const PropertyListing = ({ propertyInfo }) => {
       </div>
       <div className="mt-6 p-4 bg-gray-100 rounded-lg text-sm">
         <h4 className="font-bold mb-2">取扱不動産会社情報</h4>
-        <p>会社名: {propertyInfo['取扱不動産会社'] || '情報なし'}</p>
-        <p>TEL: {propertyInfo['電話番号'] || '情報なし'}</p>
-        <p>住所: {propertyInfo['不動産会社住所'] || '情報なし'}</p>
-        <p>免許番号: {propertyInfo['免許番号'] || '情報なし'}</p>
+        <p>会社名: {propertyInfo['取扱不動産会社'] || '株式会社○○不動産'}</p>
+        <p>TEL: {propertyInfo['電話番号'] || '000-000-0000'}</p>
+        <p>住所: {propertyInfo['不動産会社住所'] || '愛知県名古屋市中区○○-○-○'}</p>
+        <p>免許番号: {propertyInfo['免許番号'] || '国土交通大臣免許(0)第00000号'}</p>
       </div>
     </div>
   );
