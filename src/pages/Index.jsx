@@ -68,16 +68,6 @@ const Index = () => {
       return;
     }
 
-    // Check API key format
-    if (!apiKey.startsWith('sk-') || apiKey.length < 20) {
-      toast({
-        title: "エラー",
-        description: "無効なAPIキー形式です。正しいAPIキーを入力してください。",
-        variant: "destructive",
-      });
-      return;
-    }
-
     if (!uploadedImage) {
       toast({
         title: "エラー",
@@ -88,12 +78,6 @@ const Index = () => {
     }
 
     try {
-      setExtractedInfo(null); // Reset previous results
-      toast({
-        title: "処理中",
-        description: "物件情報を抽出しています...",
-      });
-
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -119,36 +103,13 @@ const Index = () => {
               ]
             }
           ],
-          max_tokens: 500
+          max_tokens: 500,
+          response_format: { type: "json_object" }
         })
       });
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('無効なAPIキーです。正しいAPIキーを入力してください。');
-        } else if (response.status === 404) {
-          throw new Error('APIエンドポイントが見つかりません。ネットワーク接続を確認してください。');
-        } else if (response.status === 429) {
-          throw new Error('APIリクエスト制限に達しました。しばらく待ってから再試行してください。');
-        } else {
-          throw new Error(`APIエラー: ${response.status} ${response.statusText}`);
-        }
-      }
-
       const data = await response.json();
-
-      if (!data.choices || !data.choices[0] || !data.choices[0].message || !data.choices[0].message.content) {
-        throw new Error('予期せぬAPIレスポンス構造です。サポートに連絡してください。');
-      }
-
-      let extractedData;
-      try {
-        extractedData = JSON.parse(data.choices[0].message.content);
-      } catch (parseError) {
-        console.error('JSON parse error:', parseError);
-        throw new Error('APIからの応答をパースできませんでした。サポートに連絡してください。');
-      }
-
+      const extractedData = JSON.parse(data.choices[0].message.content);
       setExtractedInfo(extractedData);
 
       toast({
@@ -157,15 +118,9 @@ const Index = () => {
       });
     } catch (error) {
       console.error('Error:', error);
-      let errorMessage = error.message;
-      if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
-        errorMessage = 'ネットワークエラーが発生しました。インターネット接続を確認してください。';
-      } else if (error.message.includes('api.openai.com')) {
-        errorMessage = 'OpenAI APIとの通信に問題が発生しました。APIの状態を確認してください。';
-      }
       toast({
         title: "エラー",
-        description: `情報の抽出に失敗しました: ${errorMessage}`,
+        description: "情報の抽出に失敗しました。",
         variant: "destructive",
       });
     }
