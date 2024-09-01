@@ -4,7 +4,6 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { useToast } from "@/components/ui/use-toast"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import PropertyListing from '../components/PropertyListing';
 
 const Index = () => {
@@ -139,34 +138,7 @@ const Index = () => {
           <p className="mt-2">物件情報を抽出中です。しばらくお待ちください...</p>
         </div>
       )}
-      {extractedInfo && (
-        <>
-          <Card className="mt-4">
-            <CardHeader>
-              <CardTitle>抽出された物件情報</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>項目</TableHead>
-                    <TableHead>情報</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {Object.entries(extractedInfo).map(([key, value]) => (
-                    <TableRow key={key}>
-                      <TableCell>{key}</TableCell>
-                      <TableCell>{value || '情報なし'}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-          <PropertyListing propertyInfo={extractedInfo} />
-        </>
-      )}
+      {extractedInfo && <PropertyListing propertyInfo={extractedInfo} />}
     </div>
   );
 };
