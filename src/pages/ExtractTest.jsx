@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -7,6 +7,8 @@ import { useToast } from "../components/ui/use-toast";
 import { useDropzone } from 'react-dropzone';
 import PropertyListing from '../components/PropertyListing';
 
+const MAX_CONCURRENT_REQUESTS = 5;
+
 const ExtractTest = () => {
   const [apiKey, setApiKey] = useState('');
   const [extractedInfoArray, setExtractedInfoArray] = useState([]);
@@ -14,7 +16,8 @@ const ExtractTest = () => {
   const [customImage, setCustomImage] = useState(null);
   const [rawDataArray, setRawDataArray] = useState([]);
   const [requestCount, setRequestCount] = useState(3);
-  const [completedRequests, setCompletedRequests] = useState(0);
+  const completedRequestsRef = useRef(0);
+  const [progress, setProgress] = useState(0);
   const { toast } = useToast();
 
   const onDrop = useCallback((acceptedFiles) => {
@@ -49,7 +52,6 @@ const ExtractTest = () => {
 
   const extractInfo = async () => {
     try {
-      console.log('Sending request to API...');
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -80,32 +82,24 @@ const ExtractTest = () => {
         })
       });
 
-      console.log('Response received:', response.status);
-      const data = await response.json();
-      console.log('Response data:', data);
-
       if (!response.ok) {
-        const errorMessage = data.error?.message || `API request failed with status ${response.status}`;
-        console.error('API Error:', errorMessage);
-        throw new Error(errorMessage);
+        const data = await response.json();
+        throw new Error(data.error?.message || `API request failed with status ${response.status}`);
       }
 
+      const data = await response.json();
+
       if (!data.choices?.[0]?.message?.content) {
-        console.error('Invalid response structure:', data);
         throw new Error('Invalid response structure from API');
       }
 
       let extractedData;
       try {
         extractedData = JSON.parse(data.choices[0].message.content);
-        console.log('Parsed data:', extractedData);
       } catch (e) {
-        console.error('JSON parse error:', e);
-        console.error('Content that failed to parse:', data.choices[0].message.content);
         throw new Error('Failed to parse API response as JSON');
       }
 
-      // プロパティ名から番号を削除し、nullやundefinedを「情報なし」に変換
       const cleanedData = {};
       for (const [key, value] of Object.entries(extractedData)) {
         const cleanKey = key.replace(/^\d+\./, '');
@@ -114,9 +108,28 @@ const ExtractTest = () => {
 
       return { cleanedData, rawData: data };
     } catch (error) {
-      console.error('Extract info error:', error);
       throw error;
     }
+  };
+
+  const processBatch = async (startIdx, endIdx) => {
+    const batch = [];
+    for (let i = startIdx; i < endIdx; i++) {
+      try {
+        const result = await extractInfo();
+        batch.push(result);
+        completedRequestsRef.current += 1;
+        setProgress(Math.round((completedRequestsRef.current / requestCount) * 100));
+      } catch (error) {
+        console.error(`Error in request ${i + 1}:`, error);
+        toast({
+          title: "警告",
+          description: `リクエスト ${i + 1} が失敗しました: ${error.message}`,
+          variant: "warning",
+        });
+      }
+    }
+    return batch;
   };
 
   const handleExtract = async () => {
@@ -141,48 +154,29 @@ const ExtractTest = () => {
     setIsLoading(true);
     setExtractedInfoArray([]);
     setRawDataArray([]);
-    setCompletedRequests(0);
+    completedRequestsRef.current = 0;
+    setProgress(0);
 
     try {
-      // 並列実行用の配列を作成
-      const requests = Array(requestCount).fill().map(async (_, index) => {
-        try {
-          console.log(`Starting request ${index + 1}/${requestCount}`);
-          const result = await extractInfo();
-          
-          // 進捗状況を更新（並列実行でも正確に表示）
-          setCompletedRequests(prev => prev + 1);
-          
-          console.log(`Request ${index + 1} completed successfully`);
-          return result;
-        } catch (error) {
-          console.error(`Error in request ${index + 1}:`, error);
-          toast({
-            title: "警告",
-            description: `リクエスト ${index + 1} が失敗しました: ${error.message}`,
-            variant: "warning",
-          });
-          return null;
-        }
-      });
-
-      // すべてのリクエストを並列実行
-      const results = await Promise.all(requests);
+      const results = [];
+      const batchSize = MAX_CONCURRENT_REQUESTS;
       
-      // 成功したリクエストのみをフィルタリング
-      const successfulResults = results.filter(result => result !== null);
+      for (let i = 0; i < requestCount; i += batchSize) {
+        const batchEnd = Math.min(i + batchSize, requestCount);
+        const batchResults = await processBatch(i, batchEnd);
+        results.push(...batchResults);
+      }
 
-      if (successfulResults.length === 0) {
+      if (results.length === 0) {
         throw new Error('すべてのリクエストが失敗しました');
       }
 
-      // 結果を状態に反映
-      setExtractedInfoArray(successfulResults.map(r => r.cleanedData));
-      setRawDataArray(successfulResults.map(r => r.rawData));
+      setExtractedInfoArray(results.map(r => r.cleanedData));
+      setRawDataArray(results.map(r => r.rawData));
 
       toast({
         title: "成功",
-        description: `${successfulResults.length}/${requestCount}回の情報抽出が完了しました。`,
+        description: `${results.length}/${requestCount}回の情報抽出が完了しました。`,
       });
     } catch (error) {
       console.error('Error:', error);
@@ -200,10 +194,10 @@ const ExtractTest = () => {
     setCustomImage(null);
     setExtractedInfoArray([]);
     setRawDataArray([]);
-    setCompletedRequests(0);
+    setProgress(0);
+    completedRequestsRef.current = 0;
   };
 
-  // 結果の一致率を計算
   const calculateMatchRate = (key) => {
     if (extractedInfoArray.length === 0) return null;
     
@@ -218,7 +212,6 @@ const ExtractTest = () => {
     };
   };
 
-  // 重要な項目のリスト
   const keyItems = [
     '家賃', '管理費', '共益費', '敷金', '礼金', '住所', '最寄駅', '駅からの距離',
     '建物種別', '構造', '築年数', '専有面積', '間取り'
@@ -296,7 +289,7 @@ const ExtractTest = () => {
               {isLoading ? (
                 <span className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  処理中... ({completedRequests}/{requestCount})
+                  処理中... {progress}%
                 </span>
               ) : (
                 '情報を抽出'
