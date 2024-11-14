@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "../components/ui/card";
+import { Badge } from "../components/ui/badge";
 import { motion } from "framer-motion";
 import { useDropzone } from 'react-dropzone';
 
@@ -42,6 +42,13 @@ const PropertyListing = React.forwardRef(({ propertyInfo, language }, ref) => {
   };
 
   const managementFee = formatFee(propertyInfo['管理費'], '管理費') || formatFee(propertyInfo['共益費'], '共益費') || '情報なし';
+
+  // 特徴や魅力的なポイントを配列に変換
+  const features = Array.isArray(propertyInfo['特徴や魅力的なポイント'])
+    ? propertyInfo['特徴や魅力的なポイント']
+    : propertyInfo['特徴や魅力的なポイント']
+      ? [propertyInfo['特徴や魅力的なポイント']]
+      : ['情報なし'];
 
   return (
     <motion.div 
@@ -115,12 +122,9 @@ const PropertyListing = React.forwardRef(({ propertyInfo, language }, ref) => {
             <div>
               <p className="font-bold text-sm mb-1 text-blue-800">物件の特徴</p>
               <ul className="list-disc list-inside text-xs text-gray-700">
-                {propertyInfo['特徴や魅力的なポイント'] ? 
-                  propertyInfo['特徴や魅力的なポイント'].map((point, index) => (
-                    <li key={index}>{point}</li>
-                  )) : 
-                  <li>情報なし</li>
-                }
+                {features.map((point, index) => (
+                  <li key={index}>{String(point)}</li>
+                ))}
               </ul>
             </div>
           </div>
@@ -134,7 +138,7 @@ const PropertyListing = React.forwardRef(({ propertyInfo, language }, ref) => {
                       return (
                         <div key={key} className="mb-1">
                           <p className="font-semibold text-blue-600">{key}</p>
-                          <p className="text-gray-700">{propertyInfo[key]}</p>
+                          <p className="text-gray-700">{String(propertyInfo[key])}</p>
                         </div>
                       );
                     }
@@ -149,7 +153,7 @@ const PropertyListing = React.forwardRef(({ propertyInfo, language }, ref) => {
           <h4 className="font-bold mb-1 text-blue-800">取扱不動産会社情報</h4>
           {['取扱不動産会社', '電話番号', '不動産会社住所', '免許番号'].map((key) => {
             if (propertyInfo[key] && propertyInfo[key] !== '情報なし') {
-              return <p key={key} className="text-gray-700"><span className="font-medium">{key}:</span> {propertyInfo[key]}</p>;
+              return <p key={key} className="text-gray-700"><span className="font-medium">{key}:</span> {String(propertyInfo[key])}</p>;
             }
             return null;
           })}
