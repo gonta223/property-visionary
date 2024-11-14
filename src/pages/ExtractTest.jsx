@@ -348,9 +348,9 @@ const ExtractTest = () => {
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">項目</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">一致率</th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">抽出された値</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-1/6">項目</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-2/6">一致率</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-3/6">抽出された値</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -360,22 +360,26 @@ const ExtractTest = () => {
                         
                         return (
                           <tr key={key}>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 w-1/6">
                               {key}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              <div className="flex items-center">
-                                <div
-                                  className={`h-2.5 rounded-full mr-2 ${
-                                    match.rate === 100 ? 'bg-green-500' :
-                                    match.rate >= 70 ? 'bg-yellow-500' : 'bg-red-500'
-                                  }`}
-                                  style={{ width: `${match.rate}%` }}
-                                />
-                                {match.rate.toFixed(0)}%
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 w-2/6">
+                              <div className="flex items-center gap-2">
+                                <div className="flex-grow bg-gray-200 rounded-full h-2.5 w-full">
+                                  <div
+                                    className={`h-2.5 rounded-full ${
+                                      match.rate === 100 ? 'bg-green-500' :
+                                      match.rate >= 70 ? 'bg-yellow-500' : 'bg-red-500'
+                                    }`}
+                                    style={{ width: `${match.rate}%` }}
+                                  />
+                                </div>
+                                <span className="flex-shrink-0 w-12 text-right">
+                                  {match.rate.toFixed(0)}%
+                                </span>
                               </div>
                             </td>
-                            <td className="px-6 py-4 text-sm text-gray-500">
+                            <td className="px-6 py-4 text-sm text-gray-500 w-3/6">
                               {match.values.join(' | ')}
                             </td>
                           </tr>
