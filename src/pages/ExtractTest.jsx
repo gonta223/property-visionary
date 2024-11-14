@@ -9,10 +9,11 @@ import PropertyListing from '../components/PropertyListing';
 
 const ExtractTest = () => {
   const [apiKey, setApiKey] = useState('');
-  const [extractedInfo, setExtractedInfo] = useState(null);
+  const [extractedInfoArray, setExtractedInfoArray] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [customImage, setCustomImage] = useState(null);
-  const [rawData, setRawData] = useState(null);
+  const [rawDataArray, setRawDataArray] = useState([]);
+  const [requestCount, setRequestCount] = useState(3); // デフォルトで3回
   const { toast } = useToast();
 
   const onDrop = useCallback((acceptedFiles) => {
@@ -38,30 +39,16 @@ const ExtractTest = () => {
     setApiKey(e.target.value);
   };
 
-  const handleExtract = async () => {
-    if (!apiKey) {
-      toast({
-        title: "エラー",
-        description: "APIキーを入力してください。",
-        variant: "destructive",
-      });
-      return;
+  const handleRequestCountChange = (e) => {
+    const count = parseInt(e.target.value);
+    if (count > 0 && count <= 10) {
+      setRequestCount(count);
     }
+  };
 
-    if (!customImage) {
-      toast({
-        title: "エラー",
-        description: "画像をアップロードしてください。",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    setExtractedInfo(null);
-    setRawData(null);
-
+  const extractInfo = async () => {
     try {
+      console.log('Sending request to API...');
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -92,33 +79,97 @@ const ExtractTest = () => {
         })
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(
-          errorData.error?.message || 
-          `API request failed with status ${response.status}`
-        );
-      }
-
+      console.log('Response received:', response.status);
       const data = await response.json();
-      setRawData(JSON.stringify(data, null, 2));
+      console.log('Response data:', data);
+
+      if (!response.ok) {
+        const errorMessage = data.error?.message || `API request failed with status ${response.status}`;
+        console.error('API Error:', errorMessage);
+        throw new Error(errorMessage);
+      }
 
       if (!data.choices?.[0]?.message?.content) {
-        throw new Error('Unexpected response structure from API');
+        console.error('Invalid response structure:', data);
+        throw new Error('Invalid response structure from API');
       }
 
-      const extractedData = JSON.parse(data.choices[0].message.content);
-      
-      // プロパティ名から番号を削除
-      const cleanedData = Object.fromEntries(
-        Object.entries(extractedData).map(([key, value]) => [key.replace(/^\d+\./, ''), value])
-      );
-      
-      setExtractedInfo(cleanedData);
+      let extractedData;
+      try {
+        extractedData = JSON.parse(data.choices[0].message.content);
+        console.log('Parsed data:', extractedData);
+      } catch (e) {
+        console.error('JSON parse error:', e);
+        console.error('Content that failed to parse:', data.choices[0].message.content);
+        throw new Error('Failed to parse API response as JSON');
+      }
+
+      // プロパティ名から番号を削除し、nullやundefinedを「情報なし」に変換
+      const cleanedData = {};
+      for (const [key, value] of Object.entries(extractedData)) {
+        const cleanKey = key.replace(/^\d+\./, '');
+        cleanedData[cleanKey] = value || '情報なし';
+      }
+
+      return { cleanedData, rawData: data };
+    } catch (error) {
+      console.error('Extract info error:', error);
+      throw error;
+    }
+  };
+
+  const handleExtract = async () => {
+    if (!apiKey) {
+      toast({
+        title: "エラー",
+        description: "APIキーを入力してください。",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!customImage) {
+      toast({
+        title: "エラー",
+        description: "画像をアップロードしてください。",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsLoading(true);
+    setExtractedInfoArray([]);
+    setRawDataArray([]);
+
+    try {
+      const results = [];
+      for (let i = 0; i < requestCount; i++) {
+        try {
+          console.log(`Starting request ${i + 1}/${requestCount}`);
+          const result = await extractInfo();
+          results.push(result);
+          
+          setExtractedInfoArray(prev => [...prev, result.cleanedData]);
+          setRawDataArray(prev => [...prev, result.rawData]);
+          
+          console.log(`Request ${i + 1} completed successfully`);
+        } catch (error) {
+          console.error(`Error in request ${i + 1}:`, error);
+          toast({
+            title: "警告",
+            description: `リクエスト ${i + 1} が失敗しました: ${error.message}`,
+            variant: "warning",
+          });
+        }
+      }
+
+      if (results.length === 0) {
+        throw new Error('すべてのリクエストが失敗しました');
+      }
 
       toast({
         title: "成功",
-        description: "物件情報の抽出が完了しました。",
+        description: `${results.length}/${requestCount}回の情報抽出が完了しました。`,
       });
     } catch (error) {
       console.error('Error:', error);
@@ -134,9 +185,30 @@ const ExtractTest = () => {
 
   const resetTest = () => {
     setCustomImage(null);
-    setExtractedInfo(null);
-    setRawData(null);
+    setExtractedInfoArray([]);
+    setRawDataArray([]);
   };
+
+  // 結果の一致率を計算
+  const calculateMatchRate = (key) => {
+    if (extractedInfoArray.length === 0) return null;
+    
+    const values = extractedInfoArray.map(info => info[key] || '情報なし');
+    const uniqueValues = new Set(values);
+    const mainValue = values[0];
+    const matchCount = values.filter(v => v === mainValue).length;
+    
+    return {
+      rate: (matchCount / values.length) * 100,
+      values: Array.from(uniqueValues),
+    };
+  };
+
+  // 重要な項目のリスト
+  const keyItems = [
+    '家賃', '管理費', '共益費', '敷金', '礼金', '住所', '最寄駅', '駅からの距離',
+    '建物種別', '構造', '築年数', '専有面積', '間取り'
+  ];
 
   return (
     <div className="container mx-auto p-4 min-h-screen bg-gradient-to-b from-gray-50 to-white">
@@ -145,16 +217,30 @@ const ExtractTest = () => {
           <CardTitle className="text-2xl font-bold text-blue-800">物件情報抽出テスト</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="api-key" className="text-sm font-medium">APIキー</Label>
-            <Input
-              id="api-key"
-              type="password"
-              value={apiKey}
-              onChange={handleApiKeyChange}
-              placeholder="sk-..."
-              className="font-mono"
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="api-key" className="text-sm font-medium">APIキー</Label>
+              <Input
+                id="api-key"
+                type="password"
+                value={apiKey}
+                onChange={handleApiKeyChange}
+                placeholder="sk-..."
+                className="font-mono"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="request-count" className="text-sm font-medium">リクエスト回数 (1-10)</Label>
+              <Input
+                id="request-count"
+                type="number"
+                min="1"
+                max="10"
+                value={requestCount}
+                onChange={handleRequestCountChange}
+                className="font-mono"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -196,13 +282,13 @@ const ExtractTest = () => {
               {isLoading ? (
                 <span className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  処理中...
+                  処理中... ({extractedInfoArray.length}/{requestCount})
                 </span>
               ) : (
                 '情報を抽出'
               )}
             </Button>
-            {(extractedInfo || customImage) && (
+            {(extractedInfoArray.length > 0 || customImage) && (
               <Button
                 onClick={resetTest}
                 variant="outline"
@@ -213,17 +299,75 @@ const ExtractTest = () => {
             )}
           </div>
 
-          {extractedInfo && !isLoading && (
-            <div className="space-y-4">
-              <h2 className="text-xl font-semibold text-blue-800">抽出結果</h2>
-              <PropertyListing propertyInfo={extractedInfo} />
-              
-              {rawData && (
+          {extractedInfoArray.length > 0 && !isLoading && (
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <h2 className="text-xl font-semibold text-blue-800">抽出結果の比較</h2>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">項目</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">一致率</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">抽出された値</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {keyItems.map(key => {
+                        const match = calculateMatchRate(key);
+                        if (!match) return null;
+                        
+                        return (
+                          <tr key={key}>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {key}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              <div className="flex items-center">
+                                <div
+                                  className={`h-2.5 rounded-full mr-2 ${
+                                    match.rate === 100 ? 'bg-green-500' :
+                                    match.rate >= 70 ? 'bg-yellow-500' : 'bg-red-500'
+                                  }`}
+                                  style={{ width: `${match.rate}%` }}
+                                />
+                                {match.rate.toFixed(0)}%
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-500">
+                              {match.values.join(' | ')}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h2 className="text-xl font-semibold text-blue-800">個別の抽出結果</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {extractedInfoArray.map((info, index) => (
+                    <div key={index} className="border rounded-lg p-4">
+                      <h3 className="text-lg font-semibold mb-2">結果 #{index + 1}</h3>
+                      <PropertyListing propertyInfo={info} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {rawDataArray.length > 0 && (
                 <div className="space-y-2">
                   <h3 className="text-lg font-semibold text-blue-800">API レスポンス:</h3>
-                  <pre className="bg-gray-50 p-4 rounded-lg overflow-auto max-h-96 text-sm font-mono border border-gray-200">
-                    <code>{rawData}</code>
-                  </pre>
+                  {rawDataArray.map((rawData, index) => (
+                    <div key={index} className="mb-4">
+                      <h4 className="text-md font-medium mb-2">レスポンス #{index + 1}</h4>
+                      <pre className="bg-gray-50 p-4 rounded-lg overflow-auto max-h-96 text-sm font-mono border border-gray-200">
+                        <code>{JSON.stringify(rawData, null, 2)}</code>
+                      </pre>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
