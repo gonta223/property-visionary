@@ -9,6 +9,12 @@ import PropertyListing from '../components/PropertyListing';
 
 const MAX_CONCURRENT_REQUESTS = 5;
 
+// 重要な項目のリスト
+const keyItems = [
+  '家賃', '管理費', '共益費', '敷金', '礼金', '住所', '最寄駅', '駅からの距離',
+  '建物種別', '構造', '築年数', '専有面積', '間取り'
+];
+
 const ExtractTest = () => {
   const [apiKey, setApiKey] = useState('');
   const [extractedInfoArray, setExtractedInfoArray] = useState([]);
@@ -18,7 +24,13 @@ const ExtractTest = () => {
   const [requestCount, setRequestCount] = useState(3);
   const completedRequestsRef = useRef(0);
   const [progress, setProgress] = useState(0);
+  const [debugLogs, setDebugLogs] = useState([]);
   const { toast } = useToast();
+
+  const addDebugLog = (message) => {
+    console.log(message);
+    setDebugLogs(prev => [...prev, `${new Date().toISOString()}: ${message}`]);
+  };
 
   const onDrop = useCallback((acceptedFiles) => {
     const file = acceptedFiles[0];
@@ -26,6 +38,7 @@ const ExtractTest = () => {
       const reader = new FileReader();
       reader.onload = (e) => {
         setCustomImage(e.target.result);
+        addDebugLog('画像がアップロードされました');
       };
       reader.readAsDataURL(file);
     }
@@ -47,11 +60,14 @@ const ExtractTest = () => {
     const count = parseInt(e.target.value);
     if (count > 0 && count <= 10) {
       setRequestCount(count);
+      addDebugLog(`リクエスト回数が${count}回に設定されました`);
     }
   };
 
-  const extractInfo = async () => {
+  const extractInfo = async (requestIndex) => {
     try {
+      addDebugLog(`リクエスト #${requestIndex + 1} 開始`);
+      
       const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -82,21 +98,28 @@ const ExtractTest = () => {
         })
       });
 
+      addDebugLog(`リクエスト #${requestIndex + 1} レスポンス受信: ${response.status}`);
+
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error?.message || `API request failed with status ${response.status}`);
+        const errorData = await response.json();
+        addDebugLog(`リクエスト #${requestIndex + 1} エラー: ${JSON.stringify(errorData)}`);
+        throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
       }
 
       const data = await response.json();
+      addDebugLog(`リクエスト #${requestIndex + 1} データ受信完了`);
 
       if (!data.choices?.[0]?.message?.content) {
+        addDebugLog(`リクエスト #${requestIndex + 1} 無効なレスポンス構造: ${JSON.stringify(data)}`);
         throw new Error('Invalid response structure from API');
       }
 
       let extractedData;
       try {
         extractedData = JSON.parse(data.choices[0].message.content);
+        addDebugLog(`リクエスト #${requestIndex + 1} JSONパース成功`);
       } catch (e) {
+        addDebugLog(`リクエスト #${requestIndex + 1} JSONパースエラー: ${e.message}`);
         throw new Error('Failed to parse API response as JSON');
       }
 
@@ -106,46 +129,43 @@ const ExtractTest = () => {
         cleanedData[cleanKey] = value || '情報なし';
       }
 
+      addDebugLog(`リクエスト #${requestIndex + 1} 完了`);
       return { cleanedData, rawData: data };
     } catch (error) {
+      addDebugLog(`リクエスト #${requestIndex + 1} 失敗: ${error.message}`);
       throw error;
     }
   };
 
   const processBatch = async (startIdx, endIdx) => {
-    const batch = [];
-    for (let i = startIdx; i < endIdx; i++) {
+    addDebugLog(`バッチ処理開始: ${startIdx + 1}~${endIdx}`);
+    const batchPromises = Array(endIdx - startIdx).fill().map(async (_, i) => {
+      const currentIndex = startIdx + i;
       try {
-        const result = await extractInfo();
-        batch.push(result);
+        const result = await extractInfo(currentIndex);
         completedRequestsRef.current += 1;
         setProgress(Math.round((completedRequestsRef.current / requestCount) * 100));
+        return result;
       } catch (error) {
-        console.error(`Error in request ${i + 1}:`, error);
         toast({
           title: "警告",
-          description: `リクエスト ${i + 1} が失敗しました: ${error.message}`,
+          description: `リクエスト ${currentIndex + 1} が失敗しました: ${error.message}`,
           variant: "warning",
         });
+        return null;
       }
-    }
-    return batch;
+    });
+
+    const results = await Promise.all(batchPromises);
+    addDebugLog(`バッチ完了: ${startIdx + 1}~${endIdx}`);
+    return results.filter(result => result !== null);
   };
 
   const handleExtract = async () => {
-    if (!apiKey) {
+    if (!apiKey || !customImage) {
       toast({
         title: "エラー",
-        description: "APIキーを入力してください。",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!customImage) {
-      toast({
-        title: "エラー",
-        description: "画像をアップロードしてください。",
+        description: !apiKey ? "APIキーを入力してください。" : "画像をアップロードしてください。",
         variant: "destructive",
       });
       return;
@@ -154,32 +174,36 @@ const ExtractTest = () => {
     setIsLoading(true);
     setExtractedInfoArray([]);
     setRawDataArray([]);
+    setDebugLogs([]);
     completedRequestsRef.current = 0;
     setProgress(0);
 
+    addDebugLog(`抽出開始: 全${requestCount}件`);
+
     try {
-      const results = [];
-      const batchSize = MAX_CONCURRENT_REQUESTS;
-      
-      for (let i = 0; i < requestCount; i += batchSize) {
-        const batchEnd = Math.min(i + batchSize, requestCount);
+      const allResults = [];
+      for (let i = 0; i < requestCount; i += MAX_CONCURRENT_REQUESTS) {
+        const batchEnd = Math.min(i + MAX_CONCURRENT_REQUESTS, requestCount);
+        addDebugLog(`バッチ開始: ${i + 1}~${batchEnd}件目`);
         const batchResults = await processBatch(i, batchEnd);
-        results.push(...batchResults);
+        allResults.push(...batchResults);
       }
 
-      if (results.length === 0) {
+      if (allResults.length === 0) {
         throw new Error('すべてのリクエストが失敗しました');
       }
 
-      setExtractedInfoArray(results.map(r => r.cleanedData));
-      setRawDataArray(results.map(r => r.rawData));
+      setExtractedInfoArray(allResults.map(r => r.cleanedData));
+      setRawDataArray(allResults.map(r => r.rawData));
+
+      addDebugLog(`処理完了: 成功${allResults.length}/${requestCount}件`);
 
       toast({
         title: "成功",
-        description: `${results.length}/${requestCount}回の情報抽出が完了しました。`,
+        description: `${allResults.length}/${requestCount}回の情報抽出が完了しました。`,
       });
     } catch (error) {
-      console.error('Error:', error);
+      addDebugLog(`エラー発生: ${error.message}`);
       toast({
         title: "エラー",
         description: `情報の抽出に失敗しました: ${error.message}`,
@@ -195,7 +219,9 @@ const ExtractTest = () => {
     setExtractedInfoArray([]);
     setRawDataArray([]);
     setProgress(0);
+    setDebugLogs([]);
     completedRequestsRef.current = 0;
+    addDebugLog('リセット完了');
   };
 
   const calculateMatchRate = (key) => {
@@ -212,16 +238,16 @@ const ExtractTest = () => {
     };
   };
 
-  const keyItems = [
-    '家賃', '管理費', '共益費', '敷金', '礼金', '住所', '最寄駅', '駅からの距離',
-    '建物種別', '構造', '築年数', '専有面積', '間取り'
-  ];
-
   return (
     <div className="container mx-auto p-4 min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <Card className="mb-6 shadow-lg">
         <CardHeader>
-          <CardTitle className="text-2xl font-bold text-blue-800">物件情報抽出テスト</CardTitle>
+          <CardTitle className="text-2xl font-bold text-blue-800">
+            物件情報抽出テスト
+            <span className="text-sm font-normal text-gray-600 ml-2">
+              (同時実行数: 最大{MAX_CONCURRENT_REQUESTS}件)
+            </span>
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
@@ -304,6 +330,14 @@ const ExtractTest = () => {
                 リセット
               </Button>
             )}
+          </div>
+
+          {/* デバッグログ表示 */}
+          <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+            <h3 className="text-lg font-semibold text-blue-800 mb-2">デバッグログ:</h3>
+            <pre className="text-xs font-mono bg-gray-100 p-2 rounded max-h-40 overflow-auto">
+              {debugLogs.join('\n')}
+            </pre>
           </div>
 
           {extractedInfoArray.length > 0 && !isLoading && (
