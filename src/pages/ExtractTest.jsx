@@ -13,7 +13,8 @@ const ExtractTest = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [customImage, setCustomImage] = useState(null);
   const [rawDataArray, setRawDataArray] = useState([]);
-  const [requestCount, setRequestCount] = useState(3); // デフォルトで3回
+  const [requestCount, setRequestCount] = useState(3);
+  const [completedRequests, setCompletedRequests] = useState(0);
   const { toast } = useToast();
 
   const onDrop = useCallback((acceptedFiles) => {
@@ -140,36 +141,48 @@ const ExtractTest = () => {
     setIsLoading(true);
     setExtractedInfoArray([]);
     setRawDataArray([]);
+    setCompletedRequests(0);
 
     try {
-      const results = [];
-      for (let i = 0; i < requestCount; i++) {
+      // 並列実行用の配列を作成
+      const requests = Array(requestCount).fill().map(async (_, index) => {
         try {
-          console.log(`Starting request ${i + 1}/${requestCount}`);
+          console.log(`Starting request ${index + 1}/${requestCount}`);
           const result = await extractInfo();
-          results.push(result);
           
-          setExtractedInfoArray(prev => [...prev, result.cleanedData]);
-          setRawDataArray(prev => [...prev, result.rawData]);
+          // 進捗状況を更新（並列実行でも正確に表示）
+          setCompletedRequests(prev => prev + 1);
           
-          console.log(`Request ${i + 1} completed successfully`);
+          console.log(`Request ${index + 1} completed successfully`);
+          return result;
         } catch (error) {
-          console.error(`Error in request ${i + 1}:`, error);
+          console.error(`Error in request ${index + 1}:`, error);
           toast({
             title: "警告",
-            description: `リクエスト ${i + 1} が失敗しました: ${error.message}`,
+            description: `リクエスト ${index + 1} が失敗しました: ${error.message}`,
             variant: "warning",
           });
+          return null;
         }
-      }
+      });
 
-      if (results.length === 0) {
+      // すべてのリクエストを並列実行
+      const results = await Promise.all(requests);
+      
+      // 成功したリクエストのみをフィルタリング
+      const successfulResults = results.filter(result => result !== null);
+
+      if (successfulResults.length === 0) {
         throw new Error('すべてのリクエストが失敗しました');
       }
 
+      // 結果を状態に反映
+      setExtractedInfoArray(successfulResults.map(r => r.cleanedData));
+      setRawDataArray(successfulResults.map(r => r.rawData));
+
       toast({
         title: "成功",
-        description: `${results.length}/${requestCount}回の情報抽出が完了しました。`,
+        description: `${successfulResults.length}/${requestCount}回の情報抽出が完了しました。`,
       });
     } catch (error) {
       console.error('Error:', error);
@@ -187,6 +200,7 @@ const ExtractTest = () => {
     setCustomImage(null);
     setExtractedInfoArray([]);
     setRawDataArray([]);
+    setCompletedRequests(0);
   };
 
   // 結果の一致率を計算
@@ -282,7 +296,7 @@ const ExtractTest = () => {
               {isLoading ? (
                 <span className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  処理中... ({extractedInfoArray.length}/{requestCount})
+                  処理中... ({completedRequests}/{requestCount})
                 </span>
               ) : (
                 '情報を抽出'
