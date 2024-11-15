@@ -42,6 +42,17 @@ const PropertyListing = React.forwardRef(({ propertyInfo: initialPropertyInfo, l
     return null;
   };
 
+  const formatValue = (value) => {
+    if (value === null || value === undefined) return '情報なし';
+    if (typeof value === 'object') {
+      if (Array.isArray(value)) {
+        return value.join(', ');
+      }
+      return Object.values(value).join(', ');
+    }
+    return String(value);
+  };
+
   const managementFee = formatFee(propertyInfo['管理費'], '管理費') || formatFee(propertyInfo['共益費'], '共益費') || '情報なし';
 
   // 特徴や魅力的なポイントを配列に変換
@@ -68,13 +79,13 @@ const PropertyListing = React.forwardRef(({ propertyInfo: initialPropertyInfo, l
     if (isEditing) {
       return (
         <Input
-          value={value || ''}
+          value={formatValue(value) || ''}
           onChange={(e) => handleInputChange(key, e.target.value)}
           className="text-xs w-full"
         />
       );
     }
-    return <p className="text-gray-700">{String(value || '情報なし')}</p>;
+    return <p className="text-gray-700">{formatValue(value || '情報なし')}</p>;
   };
 
   return (
@@ -88,15 +99,15 @@ const PropertyListing = React.forwardRef(({ propertyInfo: initialPropertyInfo, l
     >
       <div className="bg-blue-800 text-white p-2 flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-bold">賃貸{propertyInfo['建物種別'] || '物件'}</h2>
+          <h2 className="text-xl font-bold">賃貸{formatValue(propertyInfo['建物種別']) || '物件'}</h2>
           {isEditing ? (
             <Input
-              value={propertyInfo['物件名称'] || ''}
+              value={formatValue(propertyInfo['物件名称']) || ''}
               onChange={(e) => handleInputChange('物件名称', e.target.value)}
               className="text-sm bg-white text-black mt-1"
             />
           ) : (
-            <h3 className="text-lg">{propertyInfo['物件名称'] || '物件名称不明'}</h3>
+            <h3 className="text-lg">{formatValue(propertyInfo['物件名称']) || '物件名称不明'}</h3>
           )}
         </div>
         <button
@@ -113,12 +124,12 @@ const PropertyListing = React.forwardRef(({ propertyInfo: initialPropertyInfo, l
               <div className="text-2xl font-bold text-blue-600">
                 家賃 {isEditing ? (
                   <Input
-                    value={propertyInfo['家賃'] || ''}
+                    value={formatValue(propertyInfo['家賃']) || ''}
                     onChange={(e) => handleInputChange('家賃', e.target.value)}
                     className="inline-block w-40"
                   />
                 ) : (
-                  propertyInfo['家賃'] || '情報なし'
+                  formatValue(propertyInfo['家賃']) || '情報なし'
                 )}
                 <span className="text-xs font-normal ml-1 text-gray-600">
                   （{managementFee}）
@@ -171,13 +182,13 @@ const PropertyListing = React.forwardRef(({ propertyInfo: initialPropertyInfo, l
               {isEditing ? (
                 <div className="space-y-1">
                   <Input
-                    value={propertyInfo['最寄駅'] || ''}
+                    value={formatValue(propertyInfo['最寄駅']) || ''}
                     onChange={(e) => handleInputChange('最寄駅', e.target.value)}
                     className="text-xs"
                     placeholder="最寄駅"
                   />
                   <Input
-                    value={propertyInfo['駅からの距離'] || ''}
+                    value={formatValue(propertyInfo['駅からの距離']) || ''}
                     onChange={(e) => handleInputChange('駅からの距離', e.target.value)}
                     className="text-xs"
                     placeholder="駅からの距離"
@@ -185,7 +196,7 @@ const PropertyListing = React.forwardRef(({ propertyInfo: initialPropertyInfo, l
                 </div>
               ) : (
                 <p className="text-xs text-gray-700">
-                  {propertyInfo['最寄駅']} {propertyInfo['駅からの距離'] || '情報なし'}
+                  {formatValue(propertyInfo['最寄駅'])} {formatValue(propertyInfo['駅からの距離']) || '情報なし'}
                 </p>
               )}
             </div>
@@ -196,7 +207,7 @@ const PropertyListing = React.forwardRef(({ propertyInfo: initialPropertyInfo, l
                   features.map((point, index) => (
                     <li key={index} className="mb-1">
                       <Input
-                        value={point}
+                        value={formatValue(point)}
                         onChange={(e) => {
                           const newFeatures = [...features];
                           newFeatures[index] = e.target.value;
@@ -208,7 +219,7 @@ const PropertyListing = React.forwardRef(({ propertyInfo: initialPropertyInfo, l
                   ))
                 ) : (
                   features.map((point, index) => (
-                    <li key={index}>{String(point)}</li>
+                    <li key={index}>{formatValue(point)}</li>
                   ))
                 )}
               </ul>
