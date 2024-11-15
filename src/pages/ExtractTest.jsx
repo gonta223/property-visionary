@@ -9,10 +9,57 @@ import PropertyListing from '../components/PropertyListing';
 
 const MAX_CONCURRENT_REQUESTS = 5;
 
-// 重要な項目のリスト
+// GPT-4o APIの料金設定（2024年3月現在）
+const COST_PER_INPUT_TOKEN = 0.000005;  // $5.00 per 1M tokens
+const COST_PER_OUTPUT_TOKEN = 0.000015;  // $15.00 per 1M tokens
+
+// 全ての抽出項目のリスト
 const keyItems = [
-  '家賃', '管理費', '共益費', '敷金', '礼金', '住所', '最寄駅', '駅からの距離',
-  '建物種別', '構造', '築年数', '専有面積', '間取り'
+  '物件名称',
+  '家賃',
+  '管理費',
+  '共益費',
+  '敷金',
+  '礼金',
+  '住所',
+  '最寄駅',
+  '駅からの距離',
+  '建物種別',
+  '構造',
+  '階数',
+  '築年数',
+  'リフォーム年',
+  '向き',
+  '専有面積',
+  '間取り',
+  'バルコニー面積',
+  '設備（キッチン）',
+  '設備（バス・トイレ）',
+  '設備（収納）',
+  '設備（冷暖房）',
+  '設備（セキュリティ）',
+  '駐車場',
+  'バイク置き場',
+  '自転車置き場',
+  'ペット可否',
+  '契約期間',
+  '現況',
+  '引渡し時期',
+  '取引形態',
+  '備考',
+  'インターネット',
+  '鍵交換費',
+  '火災保険',
+  '保証会社',
+  '保証料',
+  '更新料',
+  '仲介手数料',
+  'その他初期費用',
+  '特徴や魅力的なポイント',
+  '取扱不動産会社',
+  '電話番号',
+  '不動産会社住所',
+  '免許番号'
 ];
 
 const ExtractTest = () => {
@@ -25,11 +72,35 @@ const ExtractTest = () => {
   const completedRequestsRef = useRef(0);
   const [progress, setProgress] = useState(0);
   const [debugLogs, setDebugLogs] = useState([]);
+  const [apiUsage, setApiUsage] = useState({
+    totalRequests: 0,
+    inputTokens: 0,
+    outputTokens: 0,
+    estimatedCost: 0
+  });
   const { toast } = useToast();
 
   const addDebugLog = (message) => {
     console.log(message);
     setDebugLogs(prev => [...prev, `${new Date().toISOString()}: ${message}`]);
+  };
+
+  const updateApiUsage = (promptTokens, completionTokens) => {
+    setApiUsage(prev => {
+      const newTotalRequests = prev.totalRequests + 1;
+      const newInputTokens = prev.inputTokens + promptTokens;
+      const newOutputTokens = prev.outputTokens + completionTokens;
+      const inputCost = promptTokens * COST_PER_INPUT_TOKEN;
+      const outputCost = completionTokens * COST_PER_OUTPUT_TOKEN;
+      const newEstimatedCost = prev.estimatedCost + inputCost + outputCost;
+      
+      return {
+        totalRequests: newTotalRequests,
+        inputTokens: newInputTokens,
+        outputTokens: newOutputTokens,
+        estimatedCost: newEstimatedCost
+      };
+    });
   };
 
   const onDrop = useCallback((acceptedFiles) => {
@@ -108,6 +179,11 @@ const ExtractTest = () => {
 
       const data = await response.json();
       addDebugLog(`リクエスト #${requestIndex + 1} データ受信完了`);
+
+      // トークン使用量を更新
+      if (data.usage) {
+        updateApiUsage(data.usage.prompt_tokens, data.usage.completion_tokens);
+      }
 
       if (!data.choices?.[0]?.message?.content) {
         addDebugLog(`リクエスト #${requestIndex + 1} 無効なレスポンス構造: ${JSON.stringify(data)}`);
@@ -221,6 +297,12 @@ const ExtractTest = () => {
     setProgress(0);
     setDebugLogs([]);
     completedRequestsRef.current = 0;
+    setApiUsage({
+      totalRequests: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+      estimatedCost: 0
+    });
     addDebugLog('リセット完了');
   };
 
@@ -332,6 +414,20 @@ const ExtractTest = () => {
             )}
           </div>
 
+          {/* API使用状況 */}
+          {apiUsage.totalRequests > 0 && (
+            <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+              <h3 className="text-lg font-semibold text-blue-800 mb-2">API使用状況:</h3>
+              <div className="space-y-1 text-sm">
+                <p>総リクエスト数: {apiUsage.totalRequests}回</p>
+                <p>入力トークン数: {apiUsage.inputTokens.toLocaleString()}トークン (${(apiUsage.inputTokens * COST_PER_INPUT_TOKEN).toFixed(4)})</p>
+                <p>出力トークン数: {apiUsage.outputTokens.toLocaleString()}トークン (${(apiUsage.outputTokens * COST_PER_OUTPUT_TOKEN).toFixed(4)})</p>
+                <p>総トークン数: {(apiUsage.inputTokens + apiUsage.outputTokens).toLocaleString()}トークン</p>
+                <p>推定総コスト: ${apiUsage.estimatedCost.toFixed(4)}</p>
+              </div>
+            </div>
+          )}
+
           {/* デバッグログ表示 */}
           <div className="mt-4 p-4 bg-gray-50 rounded-lg">
             <h3 className="text-lg font-semibold text-blue-800 mb-2">デバッグログ:</h3>
@@ -380,7 +476,9 @@ const ExtractTest = () => {
                               </div>
                             </td>
                             <td className="px-6 py-4 text-sm text-gray-500 w-3/6">
-                              {match.values.join(' | ')}
+                              <div className="whitespace-pre-wrap">
+                                {match.values.join(' | ')}
+                              </div>
                             </td>
                           </tr>
                         );
@@ -392,12 +490,12 @@ const ExtractTest = () => {
 
               <div className="space-y-4">
                 <h2 className="text-xl font-semibold text-blue-800">個別の抽出結果</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   {extractedInfoArray.map((info, index) => (
-                    <div key={index} className="border rounded-lg p-4">
-                      <h3 className="text-lg font-semibold mb-2">結果 #{index + 1}</h3>
+                    <Card key={index} className="p-4">
+                      <h3 className="text-lg font-semibold mb-4">結果 #{index + 1}</h3>
                       <PropertyListing propertyInfo={info} />
-                    </div>
+                    </Card>
                   ))}
                 </div>
               </div>

@@ -3,10 +3,11 @@ import { Card, CardContent } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { motion } from "framer-motion";
 import { useDropzone } from 'react-dropzone';
+import { Input } from "../components/ui/input";
 
-const PropertyListing = React.forwardRef(({ propertyInfo, language }, ref) => {
-  if (!propertyInfo) return null;
-
+const PropertyListing = React.forwardRef(({ propertyInfo: initialPropertyInfo, language }, ref) => {
+  const [propertyInfo, setPropertyInfo] = useState(initialPropertyInfo || {});
+  const [isEditing, setIsEditing] = useState(false);
   const [customImages, setCustomImages] = useState([null, null]);
 
   const onDrop = useCallback((acceptedFiles, index) => {
@@ -46,9 +47,35 @@ const PropertyListing = React.forwardRef(({ propertyInfo, language }, ref) => {
   // 特徴や魅力的なポイントを配列に変換
   const features = Array.isArray(propertyInfo['特徴や魅力的なポイント'])
     ? propertyInfo['特徴や魅力的なポイント']
+    : typeof propertyInfo['特徴や魅力的なポイント'] === 'object' && propertyInfo['特徴や魅力的なポイント'] !== null
+    ? Object.values(propertyInfo['特徴や魅力的なポイント'])
     : propertyInfo['特徴や魅力的なポイント']
       ? [propertyInfo['特徴や魅力的なポイント']]
       : ['情報なし'];
+
+  const handleEdit = () => {
+    setIsEditing(!isEditing);
+  };
+
+  const handleInputChange = (key, value) => {
+    setPropertyInfo(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  const renderEditableText = (key, value) => {
+    if (isEditing) {
+      return (
+        <Input
+          value={value || ''}
+          onChange={(e) => handleInputChange(key, e.target.value)}
+          className="text-xs w-full"
+        />
+      );
+    }
+    return <p className="text-gray-700">{String(value || '情報なし')}</p>;
+  };
 
   return (
     <motion.div 
@@ -59,16 +86,40 @@ const PropertyListing = React.forwardRef(({ propertyInfo, language }, ref) => {
       className="bg-white rounded-lg shadow-xl max-w-6xl mx-auto mt-8 overflow-hidden"
       style={{ aspectRatio: '16/9', width: '100%' }}
     >
-      <div className="bg-blue-800 text-white p-2">
-        <h2 className="text-xl font-bold">賃貸{propertyInfo['建物種別'] || '物件'}</h2>
-        <h3 className="text-lg">{propertyInfo['物件名称'] || '物件名称不明'}</h3>
+      <div className="bg-blue-800 text-white p-2 flex justify-between items-center">
+        <div>
+          <h2 className="text-xl font-bold">賃貸{propertyInfo['建物種別'] || '物件'}</h2>
+          {isEditing ? (
+            <Input
+              value={propertyInfo['物件名称'] || ''}
+              onChange={(e) => handleInputChange('物件名称', e.target.value)}
+              className="text-sm bg-white text-black mt-1"
+            />
+          ) : (
+            <h3 className="text-lg">{propertyInfo['物件名称'] || '物件名称不明'}</h3>
+          )}
+        </div>
+        <button
+          onClick={handleEdit}
+          className="px-3 py-1 bg-blue-700 hover:bg-blue-600 rounded text-sm"
+        >
+          {isEditing ? '保存' : '編集'}
+        </button>
       </div>
       <div className="p-4 h-[calc(100%-3rem)] overflow-auto">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
           <div className="md:col-span-7 flex flex-col">
             <div className="flex justify-between items-center mb-2">
               <div className="text-2xl font-bold text-blue-600">
-                家賃 {propertyInfo['家賃'] || '情報なし'}
+                家賃 {isEditing ? (
+                  <Input
+                    value={propertyInfo['家賃'] || ''}
+                    onChange={(e) => handleInputChange('家賃', e.target.value)}
+                    className="inline-block w-40"
+                  />
+                ) : (
+                  propertyInfo['家賃'] || '情報なし'
+                )}
                 <span className="text-xs font-normal ml-1 text-gray-600">
                   （{managementFee}）
                 </span>
@@ -113,18 +164,53 @@ const PropertyListing = React.forwardRef(({ propertyInfo, language }, ref) => {
               <p className="font-bold text-sm mb-1 text-blue-800">
                 {language === '英語' ? 'Address' : language === '中国語' ? '地址' : '住所'}
               </p>
-              <p className="text-xs text-gray-700">{propertyInfo['住所'] || '情報なし'}</p>
+              {renderEditableText('住所', propertyInfo['住所'])}
             </div>
             <div className="mb-2">
               <p className="font-bold text-sm mb-1 text-blue-800">アクセス</p>
-              <p className="text-xs text-gray-700">{propertyInfo['最寄駅']} {propertyInfo['駅からの距離'] || '情報なし'}</p>
+              {isEditing ? (
+                <div className="space-y-1">
+                  <Input
+                    value={propertyInfo['最寄駅'] || ''}
+                    onChange={(e) => handleInputChange('最寄駅', e.target.value)}
+                    className="text-xs"
+                    placeholder="最寄駅"
+                  />
+                  <Input
+                    value={propertyInfo['駅からの距離'] || ''}
+                    onChange={(e) => handleInputChange('駅からの距離', e.target.value)}
+                    className="text-xs"
+                    placeholder="駅からの距離"
+                  />
+                </div>
+              ) : (
+                <p className="text-xs text-gray-700">
+                  {propertyInfo['最寄駅']} {propertyInfo['駅からの距離'] || '情報なし'}
+                </p>
+              )}
             </div>
             <div>
               <p className="font-bold text-sm mb-1 text-blue-800">物件の特徴</p>
               <ul className="list-disc list-inside text-xs text-gray-700">
-                {features.map((point, index) => (
-                  <li key={index}>{String(point)}</li>
-                ))}
+                {isEditing ? (
+                  features.map((point, index) => (
+                    <li key={index} className="mb-1">
+                      <Input
+                        value={point}
+                        onChange={(e) => {
+                          const newFeatures = [...features];
+                          newFeatures[index] = e.target.value;
+                          handleInputChange('特徴や魅力的なポイント', newFeatures);
+                        }}
+                        className="text-xs w-full inline-block"
+                      />
+                    </li>
+                  ))
+                ) : (
+                  features.map((point, index) => (
+                    <li key={index}>{String(point)}</li>
+                  ))
+                )}
               </ul>
             </div>
           </div>
@@ -138,7 +224,7 @@ const PropertyListing = React.forwardRef(({ propertyInfo, language }, ref) => {
                       return (
                         <div key={key} className="mb-1">
                           <p className="font-semibold text-blue-600">{key}</p>
-                          <p className="text-gray-700">{String(propertyInfo[key])}</p>
+                          {renderEditableText(key, propertyInfo[key])}
                         </div>
                       );
                     }
@@ -153,7 +239,12 @@ const PropertyListing = React.forwardRef(({ propertyInfo, language }, ref) => {
           <h4 className="font-bold mb-1 text-blue-800">取扱不動産会社情報</h4>
           {['取扱不動産会社', '電話番号', '不動産会社住所', '免許番号'].map((key) => {
             if (propertyInfo[key] && propertyInfo[key] !== '情報なし') {
-              return <p key={key} className="text-gray-700"><span className="font-medium">{key}:</span> {String(propertyInfo[key])}</p>;
+              return (
+                <div key={key} className="mb-1">
+                  <span className="font-medium">{key}:</span>
+                  {renderEditableText(key, propertyInfo[key])}
+                </div>
+              );
             }
             return null;
           })}
