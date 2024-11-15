@@ -309,7 +309,14 @@ export default function ExtractTest() {
   const calculateMatchRate = (key) => {
     if (extractedInfoArray.length === 0) return null;
     
-    const values = extractedInfoArray.map(info => info[key] || '情報なし');
+    const values = extractedInfoArray.map(info => {
+      const value = info[key];
+      if (typeof value === 'object' && value !== null) {
+        return Array.isArray(value) ? value.join(', ') : Object.values(value).join(', ');
+      }
+      return value || '情報なし';
+    });
+    
     const uniqueValues = new Set(values);
     const mainValue = values[0];
     const matchCount = values.filter(v => v === mainValue).length;
@@ -325,7 +332,13 @@ export default function ExtractTest() {
 
     const finalVersion = {};
     keyItems.forEach(key => {
-      const values = extractedInfoArray.map(info => info[key] || '情報なし');
+      const values = extractedInfoArray.map(info => {
+        const value = info[key];
+        if (typeof value === 'object' && value !== null) {
+          return Array.isArray(value) ? value.join(', ') : Object.values(value).join(', ');
+        }
+        return value || '情報なし';
+      });
       
       // 値ごとの出現回数をカウント
       const valueCounts = values.reduce((acc, value) => {
@@ -358,6 +371,17 @@ export default function ExtractTest() {
     });
 
     return finalVersion;
+  };
+
+  const formatValue = (value) => {
+    if (value === null || value === undefined) return '情報なし';
+    if (typeof value === 'object') {
+      if (Array.isArray(value)) {
+        return value.join(', ');
+      }
+      return Object.values(value).join(', ');
+    }
+    return String(value);
   };
 
   const renderComparisonTable = () => {
@@ -411,13 +435,13 @@ export default function ExtractTest() {
                   {extractedInfoArray.map((info, index) => (
                     <td key={index} className="px-4 py-2 text-sm text-gray-500">
                       <div className="whitespace-pre-wrap">
-                        {info[key] || '情報なし'}
+                        {formatValue(info[key])}
                       </div>
                     </td>
                   ))}
                   <td className="px-4 py-2 text-sm font-medium text-gray-900 bg-green-50">
                     <div className="whitespace-pre-wrap">
-                      {finalVersion[key]}
+                      {formatValue(finalVersion[key])}
                     </div>
                   </td>
                 </tr>
