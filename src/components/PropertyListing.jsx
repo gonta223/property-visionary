@@ -12,6 +12,8 @@ import { FileDown } from 'lucide-react';
 const PropertyListing = React.forwardRef(({ propertyInfo: initialPropertyInfo, matchRates, language, apiKey }, ref) => {
   const [propertyInfo, setPropertyInfo] = useState(initialPropertyInfo || {});
   const [isEditing, setIsEditing] = useState(false);
+  const [isEditingEn, setIsEditingEn] = useState(false);
+  const [isEditingZh, setIsEditingZh] = useState(false);
   const [translatedInfo, setTranslatedInfo] = useState(null);
   const [customImages, setCustomImages] = useState([null, null]);
   const componentRef = useRef(null);
@@ -52,7 +54,7 @@ const PropertyListing = React.forwardRef(({ propertyInfo: initialPropertyInfo, m
     '設備（キッチン）', '設備（バス・トイレ）', '設備（収納）', '設備（冷暖房）', '設備（セキュリティ）',
     '駐車場', 'バイク置き場', '自転車置き場', 'ペット可否', '契約期間', '現況', '引渡し時期',
     '取引形態', '備考', 'インターネット', '鍵交換費', '火災保険', '保証会社', '保証料', '更新料', 
-    '介手数料', 'その他初期費用'
+    '仲介手数料', 'その他初期費用'
   ];
 
   const formatFee = (fee, type) => {
@@ -179,7 +181,7 @@ const PropertyListing = React.forwardRef(({ propertyInfo: initialPropertyInfo, m
     }
   };
 
-  // フォントサイズを自動調する関数
+  // フォントサイズを自動調する数
   const adjustFontSize = useCallback(() => {
     if (!containerRef.current || !contentRef.current) return;
 
@@ -263,6 +265,7 @@ const PropertyListing = React.forwardRef(({ propertyInfo: initialPropertyInfo, m
                 2. 住所は適切に翻訳し、地名はローマ字も残してください
                 3. 専門用語は不動産業界で一般的に使用される表現を使用してください
                 4. 情報なしの項目は英語では"No information"、中国語では"暂无信息"と翻訳してください
+                5. 数値範囲の区切り「〜」は英語では"to"、中国語では"至"に変換してください
               `
             }
           ],
@@ -288,7 +291,43 @@ const PropertyListing = React.forwardRef(({ propertyInfo: initialPropertyInfo, m
     }
   };
 
-  // 翻訳テンプレートを追加
+  // 各言語バージョンの編集状態を切り替える関数
+  const handleEditTranslation = (language) => {
+    if (language === 'en') {
+      setIsEditingEn(!isEditingEn);
+    } else if (language === 'zh') {
+      setIsEditingZh(!isEditingZh);
+    }
+  };
+
+  // 翻訳テキストの編集用関数
+  const handleTranslatedInputChange = (language, key, value) => {
+    setTranslatedInfo(prev => ({
+      ...prev,
+      [language]: {
+        ...prev[language],
+        [key]: value
+      }
+    }));
+  };
+
+  // 編集可能なテキストを表示する関数（翻訳バージョン用）
+  const renderEditableTranslatedText = (language, key, value) => {
+    const isEditingThis = language === 'en' ? isEditingEn : isEditingZh;
+    
+    if (isEditingThis) {
+      return (
+        <Input
+          value={formatValue(value) || ''}
+          onChange={(e) => handleTranslatedInputChange(language, key, e.target.value)}
+          className="text-xs w-full h-8"
+        />
+      );
+    }
+    return <p className="text-gray-700">{formatValue(value || '情報なし')}</p>;
+  };
+
+  // 翻訳テンプレートに全ての項目と正しいキーを追加
   const translationTemplates = {
     en: {
       "物件名称": "Property Name",
@@ -315,7 +354,7 @@ const PropertyListing = React.forwardRef(({ propertyInfo: initialPropertyInfo, m
       "設備（冷暖房）": "Facilities (AC/Heating)",
       "設備（セキュリティ）": "Facilities (Security)",
       "駐車場": "Parking",
-      "バイク置き場": "Motorcycle Parking",
+      "バイク置���場": "Motorcycle Parking",
       "自転車置き場": "Bicycle Parking",
       "ペット可否": "Pet Policy",
       "契約期間": "Contract Period",
@@ -341,7 +380,7 @@ const PropertyListing = React.forwardRef(({ propertyInfo: initialPropertyInfo, m
       "礼金": "礼金",
       "住所": "地址",
       "最寄駅": "最近车站",
-      "駅からの距離": "距离站",
+      "駅からの距離": "距离车站",
       "建物種別": "建筑类型",
       "構造": "建筑结构",
       "階数": "楼层数",
@@ -350,12 +389,12 @@ const PropertyListing = React.forwardRef(({ propertyInfo: initialPropertyInfo, m
       "向き": "朝向",
       "専有面積": "使用面积",
       "間取り": "户型",
-      "バルコニー": "台面积",
-      "設備（キッチン）": "设备（厨房）",
-      "設備（バス・トイレ）": "设备（浴室/卫生间）",
-      "設備（収納）": "设备（收纳）",
-      "設備（冷暖房）": "设备（空调/暖气）",
-      "設備（セキュリティ）": "设备（安保）",
+      "バルコニー面積": "阳台面积",
+      "設備（キッチン）": "设施（厨房）",
+      "設備（バス・トイレ）": "设施（浴室/卫生间）",
+      "設備（収納）": "设施（储物）",
+      "設備（冷暖房）": "设施（空调/暖气）",
+      "設備（セキュリティ）": "设施（安保）",
       "駐車場": "停车场",
       "バイク置き場": "摩托车停车场",
       "自転車置き場": "自行车停车场",
@@ -376,144 +415,138 @@ const PropertyListing = React.forwardRef(({ propertyInfo: initialPropertyInfo, m
     }
   };
 
-  // 値の翻訳を行う関数を追加
-  const getTranslatedValue = (language, key, value) => {
-    // 翻訳が必要な固定値のマッピング
-    const translations = {
-      en: {
-        '情報なし': 'No information',
-        'なし': 'None',
-        '有り': 'Available',
-        '不可': 'Not allowed',
-        '空室': 'Vacant',
-        '即時': 'Immediate',
-        '要加入': 'Required',
-        '利用必須': 'Mandatory',
-        '新築': 'Newly built',
-      },
-      zh: {
-        '情報なし': '暂无信息',
-        'なし': '无',
-        '有り': '有',
-        '不可': '不可',
-        '空室': '空置',
-        '即時': '即时',
-        '要加入': '需要加入',
-        '利用必須': '必须使用',
-        '新築': '新建',
-      }
-    };
-
-    // 数値と単位を含む文字列の処理（例：66,000円）
-    if (typeof value === 'string' && value.match(/^[\d,]+円/)) {
-      const number = value.replace(/[^\d,]/g, '');
-      return language === 'en' ? `${number} yen` : `${number}日元`;
-    }
-
-    // 固定値の翻訳
-    if (translations[language][value]) {
-      return translations[language][value];
-    }
-
-    // その他の値はそのまま返す
-    return value;
-  };
-
-  // TranslationResults コンポーネントを修正
+  // TranslationResults コンポーネントの修正
   const TranslationResults = () => {
     if (!translatedInfo || !showTranslations) return null;
 
-    const renderTranslatedVersion = (language) => (
-      <motion.div 
-        className="bg-white rounded-lg shadow-xl max-w-6xl mx-auto mt-8 overflow-hidden relative"
-        style={{ width: '100%', aspectRatio: '16/9' }}
-      >
-        <div className="h-full flex flex-col">
-          {/* ヘッダー */}
-          <div className={`${language === 'en' ? 'bg-blue-800' : 'bg-red-800'} text-white p-4 flex justify-between items-center shrink-0`}>
-            <h2 className="text-2xl font-bold">
-              {language === 'en' ? 'English Version' : '中文版本'}
-            </h2>
-          </div>
+    const renderTranslatedVersion = (language) => {
+      const langInfo = translatedInfo[language];
+      if (!langInfo) return null;
+      const isEditingThis = language === 'en' ? isEditingEn : isEditingZh;
 
-          <div className="flex-1 p-4 overflow-hidden">
-            <div className="h-full grid grid-cols-1 md:grid-cols-12 gap-4">
-              {/* 左側のコンテンツ */}
-              <div className="md:col-span-4 flex flex-col">
-                <div className="flex justify-between items-center mb-2">
-                  <div className={`text-xl font-bold ${getTextColorClass(matchRates?.['家賃'])}`}>
-                    {language === 'en' ? 'Rent' : '租金'} {formatValue(propertyInfo['家賃'])}
+      return (
+        <motion.div 
+          className="bg-white rounded-lg shadow-xl max-w-6xl mx-auto mt-8 overflow-hidden relative"
+          style={{ width: '100%', aspectRatio: '16/9' }}
+        >
+          <div className="h-full flex flex-col">
+            <div className={`bg-${language === 'en' ? 'blue' : 'red'}-800 text-white p-4 flex justify-between items-center shrink-0`}>
+              <h2 className="text-2xl font-bold">
+                {language === 'en' ? 'English Version' : '中文版本'}
+              </h2>
+              <button
+                onClick={() => handleEditTranslation(language)}
+                className="px-3 py-1 bg-opacity-20 hover:bg-opacity-30 bg-white rounded text-sm"
+              >
+                {isEditingThis ? '保存' : '編集'}
+              </button>
+            </div>
+
+            <div className="flex-1 p-4 overflow-y-auto">
+              <div className="h-full grid grid-cols-1 md:grid-cols-12 gap-4">
+                <div className="md:col-span-4 flex flex-col">
+                  <div className="flex justify-between items-center mb-2">
+                    <div className={`text-xl font-bold ${getTextColorClass(matchRates?.['家賃'])}`}>
+                      {translationTemplates[language]['家賃']} {langInfo['家賃']}
+                    </div>
+                  </div>
+                  <div className="mb-2">
+                    <p className={`font-bold text-sm mb-1 ${getTextColorClass(matchRates?.['住所'])}`}>
+                      {translationTemplates[language]['住所']}
+                    </p>
+                    <div className={getTextColorClass(matchRates?.['住所'])}>
+                      {langInfo['住所']}
+                    </div>
+                  </div>
+                  <div className="mb-2">
+                    <p className={`font-bold text-sm mb-1 ${getTextColorClass(matchRates?.['最寄駅'])}`}>
+                      {translationTemplates[language]['最寄駅']}
+                    </p>
+                    <p className={`text-sm ${getTextColorClass(matchRates?.['最寄駅'])}`}>
+                      {langInfo['最寄駅']} {langInfo['駅からの距離']}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2 mt-4">
+                    <div
+                      {...getRootProps0()}
+                      className="border-2 border-dashed rounded p-2 cursor-pointer hover:border-blue-400 transition-colors"
+                    >
+                      <input {...getInputProps0()} />
+                      {customImages[0] ? (
+                        <img src={customImages[0]} alt="Property 1" className="w-full h-32 object-cover rounded" />
+                      ) : (
+                        <div className="h-32 flex items-center justify-center text-gray-500">
+                          {language === 'en' ? 'Drop Image 1' : '上传图片1'}
+                        </div>
+                      )}
+                    </div>
+                    <div
+                      {...getRootProps1()}
+                      className="border-2 border-dashed rounded p-2 cursor-pointer hover:border-blue-400 transition-colors"
+                    >
+                      <input {...getInputProps1()} />
+                      {customImages[1] ? (
+                        <img src={customImages[1]} alt="Property 2" className="w-full h-32 object-cover rounded" />
+                      ) : (
+                        <div className="h-32 flex items-center justify-center text-gray-500">
+                          {language === 'en' ? 'Drop Image 2' : '上传图片2'}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <div className="mb-2">
-                  <p className={`font-bold text-sm mb-1 ${getTextColorClass(matchRates?.['住所'])}`}>
-                    {language === 'en' ? 'Address' : '地址'}
-                  </p>
-                  <div className={getTextColorClass(matchRates?.['住所'])}>
-                    {language === 'en' ? '1-43-3 Fuda, Chofu-shi, Tokyo' : '东京都调布市布田1-43-3'}
+
+                <div className="md:col-span-4">
+                  <div className="grid grid-cols-2 gap-1 text-xs h-full">
+                    {allInfo.slice(0, Math.floor(allInfo.length / 2)).map((key) => {
+                      if (langInfo[key]) {
+                        const rate = matchRates?.[key];
+                        return (
+                          <div key={key} className={`p-1.5 rounded border ${getBgColorClass(rate)} ${getBorderColorClass(rate)}`}>
+                            <p className={`font-semibold ${getTextColorClass(rate)} flex justify-between items-center text-[10px]`}>
+                              {translationTemplates[language][key]}
+                              <span className="opacity-75">
+                                {rate?.toFixed(0)}%
+                              </span>
+                            </p>
+                            {renderEditableTranslatedText(language, key, langInfo[key])}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
                   </div>
                 </div>
-                <div className="mb-2">
-                  <p className={`font-bold text-sm mb-1 ${getTextColorClass(matchRates?.['最寄駅'])}`}>
-                    {language === 'en' ? 'Access' : '交通'}
-                  </p>
-                  <p className={`text-sm ${getTextColorClass(matchRates?.['最寄駅'])}`}>
-                    {language === 'en' ? 'Ikuta Station 5-minute walk' : '生田駅 徒步5分'}
-                  </p>
-                </div>
-              </div>
 
-              {/* 中央のグリッド */}
-              <div className="md:col-span-4">
-                <div className="grid grid-cols-2 gap-1 text-xs h-full">
-                  {allInfo.slice(0, Math.floor(allInfo.length / 2)).map((key) => {
-                    if (propertyInfo[key] && propertyInfo[key] !== '情報なし') {
-                      const rate = matchRates?.[key];
-                      return (
-                        <div key={key} className={`p-1.5 rounded border ${getBgColorClass(rate)} ${getBorderColorClass(rate)}`}>
-                          <p className={`font-semibold ${getTextColorClass(rate)} flex justify-between items-center text-[10px]`}>
-                            {translationTemplates[language][key]}
-                            <span className="opacity-75">
-                              {rate?.toFixed(0)}%
-                            </span>
-                          </p>
-                          <p className="text-gray-700">{getTranslatedValue(language, key, propertyInfo[key])}</p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })}
-                </div>
-              </div>
-
-              {/* 右側のグリッド */}
-              <div className="md:col-span-4">
-                <div className="grid grid-cols-2 gap-1 text-xs h-full">
-                  {allInfo.slice(Math.floor(allInfo.length / 2)).map((key) => {
-                    if (propertyInfo[key] && propertyInfo[key] !== '情報なし') {
-                      const rate = matchRates?.[key];
-                      return (
-                        <div key={key} className={`p-1.5 rounded border ${getBgColorClass(rate)} ${getBorderColorClass(rate)}`}>
-                          <p className={`font-semibold ${getTextColorClass(rate)} flex justify-between items-center text-[10px]`}>
-                            {translationTemplates[language][key]}
-                            <span className="opacity-75">
-                              {rate?.toFixed(0)}%
-                            </span>
-                          </p>
-                          <p className="text-gray-700">{getTranslatedValue(language, key, propertyInfo[key])}</p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })}
+                <div className="md:col-span-4">
+                  <div className="grid grid-cols-2 gap-1 text-xs h-full">
+                    {allInfo.slice(Math.floor(allInfo.length / 2)).map((key) => {
+                      if (langInfo[key]) {
+                        const rate = matchRates?.[key];
+                        return (
+                          <div key={key} className={`p-1.5 rounded border ${getBgColorClass(rate)} ${getBorderColorClass(rate)}`}>
+                            <p className={`font-semibold ${getTextColorClass(rate)} flex justify-between items-center text-[10px]`}>
+                              {translationTemplates[language][key]}
+                              <span className="opacity-75">
+                                {rate?.toFixed(0)}%
+                              </span>
+                            </p>
+                            {renderEditableTranslatedText(language, key, langInfo[key])}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </motion.div>
-    );
+        </motion.div>
+      );
+    };
 
+    // 修正: 直接JSXを返す
     return (
       <div className="mt-8">
         {renderTranslatedVersion('en')}
@@ -550,7 +583,7 @@ const PropertyListing = React.forwardRef(({ propertyInfo: initialPropertyInfo, m
               {isEditing ? '保存' : '編集'}
             </button>
           </div>
-          <div className="flex-1 p-4 overflow-hidden">
+          <div className="flex-1 p-4 overflow-y-auto">
             <div className="h-full grid grid-cols-1 md:grid-cols-12 gap-4">
               <div className="md:col-span-4 flex flex-col">
                 <div className="flex justify-between items-center mb-2">
