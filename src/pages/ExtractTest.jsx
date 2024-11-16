@@ -36,7 +36,7 @@ const keyItems = [
   'バルコニー面積',
   '設備（キッチン）',
   '設備（バス・トイレ）',
-  '設備（収納）',
+  '設備（収納',
   '設備（冷暖房）',
   '設備（セキュリティ）',
   '駐車場',
@@ -227,7 +227,7 @@ export default function ExtractTest() {
               content: [
                 {
                   type: "text",
-                  text: "この不動産物件画像から以下の項目の情報を可能な限り詳細に抽出してください。情報が見つからない場合は「情報なし」と記入してください：1.物件名称、2.家賃、3.管理費、4.共益費、5.敷金、6.礼金、7.住所、8.最寄駅、9.駅からの距離、10.建物種別、11.構造、12.階数、13.築年数、14.リフォーム年、15.向き、16.専有面積、17.間取り、18.バルコニー面積、19.設備（キッチン）、20.設備（バス・トイレ）、21.設備（収納）、22.設備（冷暖房）、23.設備（セキュリティ）、24.駐車場、25.バイク置き場、26.自転車置き場、27.ペット可否、28.契約期間、29.現況、30.引渡し時期、31.取引形態、32.備考、33.取扱不動産会社、34.電話番号、35.不動産会社住所、36.免許番号、37.外観画像URL、38.内装画像1URL、39.間取り図URL、40.特徴や魅力的なポイント（3つ以上）、41.鍵交換費、42.火災保険、43.保証会社、44.保証料、45.更新料、46.仲介手数料、47.インターネット、48.その他初期費用。JSONフォーマットで出力してください。画像に含まれていない情報は「情報なし」としてください。"
+                  text: "この不動産物件画像から以下の項目の情報を可能な限り詳細に抽出してください。情報が見つからない場合は「情報なし」と記入してください：1.物件名称、2.家賃、3.管理費、4.共益費、5.敷金、6.礼金、7.住所、8.最寄駅、9.駅からの距離、10.建物種別、11.構造、12.階数、13.築年数、14.リフォーム年、15.向き、16.専有面積、17.間取り、18.バルコニー面積、19.設備（キッチン）、20.設備（バス・トイレ）、21.設備（収納）、22.設備（冷暖房）、23.設備（セキュリティ）、24.駐車場、25.バイク置き場、26.自転車置き場、27.ペット可否、28.契約期間、29.現況、30.引渡し時期、31.取引形態、32.備考、33.取扱不動産会社、34.電話番号、35.不動産会社住所、36.免許番号、37.外観画像URL、38.内装画像1URL、39.間取り図URL、40.特徴や魅力的なポイント（3つ以上）、41.鍵交換費、42.火災保険、43.保証会社、44.証料、45.更新料、46.仲介手数料、47.インターネット、48.その他初期費用。JSONフォーマットで出力してください。画像に含まれていない情報は「情報なし」としてください。"
                 },
                 {
                   type: "image_url",
@@ -606,7 +606,7 @@ export default function ExtractTest() {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <div className="space-y-2">
               <Label htmlFor="api-key" className="text-sm font-medium">APIキー</Label>
               <Input
@@ -630,35 +630,17 @@ export default function ExtractTest() {
                 className="font-mono"
               />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">画像アップロード</Label>
-            <div
-              {...getRootProps()}
-              className={`
-                border-2 border-dashed rounded-lg p-6 text-center cursor-pointer
-                transition-colors duration-200
-                ${customImage ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-blue-400'}
-              `}
-            >
-              <input {...getInputProps()} />
-              {customImage ? (
-                <div className="relative w-full h-64">
-                  <img
-                    src={customImage}
-                    alt="Uploaded property"
-                    className="absolute inset-0 w-full h-full object-contain rounded-md"
-                  />
-                  <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 transition-opacity duration-200 rounded-md" />
-                </div>
-              ) : (
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">画像1をドロップ</Label>
+              <div {...getRootProps()} className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer
+                transition-colors duration-200 border-gray-300 hover:border-blue-400">
+                <input {...getInputProps()} />
                 <div className="space-y-2">
                   <div className="text-4xl text-gray-400">📸</div>
-                  <p className="text-gray-600">画像をドロップするか、クリックしてファイルを選択</p>
+                  <p className="text-gray-600">画像1をドロップするか、クリックしてファイルを選択</p>
                   <p className="text-sm text-gray-500">対応フォーマット: JPG, PNG</p>
                 </div>
-              )}
+              </div>
             </div>
           </div>
 

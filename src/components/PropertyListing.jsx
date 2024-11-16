@@ -577,7 +577,7 @@ const PropertyListing = React.forwardRef(({ propertyInfo: initialPropertyInfo, m
                     {formatValue(propertyInfo['最寄駅'])} {formatValue(propertyInfo['駅からの距離'])}
                   </p>
                 </div>
-                <div className="grid grid-cols-2 gap-2 mt-4">
+                <div className="grid grid-cols-1 gap-2 mt-4">
                   <div
                     {...getRootProps0()}
                     className="border-2 border-dashed rounded p-2 cursor-pointer hover:border-blue-400 transition-colors"
