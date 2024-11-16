@@ -554,6 +554,7 @@ export default function ExtractTest() {
           <PropertyListing 
             propertyInfo={finalVersion} 
             matchRates={matchRates}
+            apiKey={apiKey}
           />
         </Card>
       </div>
