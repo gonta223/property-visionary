@@ -6,6 +6,7 @@ import { Label } from "../components/ui/label";
 import { useToast } from "../components/ui/use-toast";
 import { useDropzone } from 'react-dropzone';
 import PropertyListing from '../components/PropertyListing';
+import { Badge } from "../components/ui/badge";
 
 const MAX_CONCURRENT_REQUESTS = 5;
 
@@ -62,6 +63,73 @@ const keyItems = [
   '免許番号'
 ];
 
+// テストデータを定義
+const TEST_DATA = [
+  {
+    "物件名称": "アムール・ワン",
+    "家賃": "66,000円〜68,000円",
+    "管理費": "なし",
+    "共益費": "4,000円",
+    "敷金": "1ヶ月",
+    "礼金": "1ヶ月",
+    "住所": "東京都調布市布田1-43-3",
+    "最寄駅": "生田駅",
+    "駅からの距離": "徒歩5分",
+    "建物種別": "共同住宅",
+    "構造": "鉄筋コンクリート造",
+    "階数": "2階建",
+    "築年数": "新築（令和3年11月末日完成予定）",
+    "リフォーム年": "情報なし",
+    "向き": "南向き",
+    "専有面積": "24.23㎡〜26.23㎡",
+    "間取り": "1K・1R",
+    "バルコニー面積": "3.5㎡",
+    "設備（キッチン）": "システムキッチン、IHコンロ",
+    "設備（バス・トイレ）": "バス・トイレ別、温水洗浄便座、独立洗面台",
+    "設備（収納）": "クローゼット",
+    "設備（冷暖房）": "エアコン",
+    "設備（セキュリティ）": "モニター付きインターホン、オートロック",
+    "駐車場": "有り（25,000円/月）",
+    "バイク置き場": "有り（2,000円/月）",
+    "自転車置き場": "有り（無料）",
+    "ペット可否": "不可",
+    "契約期間": "2年",
+    "現況": "空室",
+    "引渡し時期": "即時",
+    "取引形態": "仲介",
+    "備考": "全室角部屋、充実設備",
+    "インターネット": "光ファイバー対応",
+    "鍵交換費": "16,500円",
+    "火災保険": "要加入",
+    "保証会社": "利用必須",
+    "保証料": "賃料の1ヶ月分",
+    "更新料": "新賃料の1ヶ月分",
+    "仲介手数料": "賃料の1ヶ月分",
+    "その他初期費用": "室内清掃費：16,500円",
+    "特徴や魅力的なポイント": ["新築物件", "全室角部屋", "充実設備で快適生活"],
+    "取扱不動産会社": "渋谷不動産エージェント 賃貸事業部",
+    "電話番号": "042-444-5980",
+    "不動産会社住所": "東京都調布市布田1-43-3",
+    "免許番号": "東京都知事(1)第12345号"
+  }
+];
+
+// 残りの9個のデータを作成（一部の値を少しずつ変えて、一致率の違いを作る）
+for (let i = 1; i < 10; i++) {
+  const variation = {
+    ...TEST_DATA[0],
+    "家賃": i % 2 === 0 ? "66,000円〜70,000円" : "66,000円〜68,000円",
+    "専有面積": i % 3 === 0 ? "24.23㎡〜28.23㎡" : "24.23㎡〜26.23㎡",
+    "設備（キッチン）": i % 2 === 0 ? "システムキッチン、ガスコンロ" : "システムキッチン、IHコンロ",
+    "設備（セキュリティ）": i % 4 === 0 ? "モニター付きインターホン、オートロック、防犯カメラ" : "モニター付きインターホン、オートロック",
+    "駐車場": i % 3 === 0 ? "有り（27,000円/月）" : "有り（25,000円/月）",
+    "特徴や魅力的なポイント": i % 2 === 0 
+      ? ["新築物件", "全室角部屋", "駅近徒歩5分"] 
+      : ["新築物件", "全室角部屋", "充実設備で快適生活"]
+  };
+  TEST_DATA.push(variation);
+}
+
 export default function ExtractTest() {
   const [apiKey, setApiKey] = useState('');
   const [extractedInfoArray, setExtractedInfoArray] = useState([]);
@@ -79,6 +147,12 @@ export default function ExtractTest() {
     estimatedCost: 0
   });
   const { toast } = useToast();
+
+  const debugInfo = {
+    version: "dev-0.1.0",
+    branch: "feature/extract-test",
+    developer: "Suguru Sato"
+  };
 
   const addDebugLog = (message) => {
     console.log(message);
@@ -453,8 +527,74 @@ export default function ExtractTest() {
     );
   };
 
+  const renderFinalVersionWithConfidence = () => {
+    if (!extractedInfoArray.length) return null;
+
+    const finalVersion = generateFinalVersion();
+    const matchRates = {};
+    
+    // 各項目の一致率を計算
+    keyItems.forEach(key => {
+      const values = extractedInfoArray.map(info => {
+        const value = info[key];
+        return formatValue(value);
+      });
+      
+      const mainValue = formatValue(finalVersion[key]);
+      const matchCount = values.filter(v => v === mainValue).length;
+      const rate = (matchCount / values.length) * 100;
+      
+      matchRates[key] = rate;
+    });
+
+    return (
+      <div className="space-y-4">
+        <h2 className="text-xl font-semibold text-blue-800">最終バージョン</h2>
+        <Card className="p-4">
+          <PropertyListing 
+            propertyInfo={finalVersion} 
+            matchRates={matchRates}
+          />
+        </Card>
+      </div>
+    );
+  };
+
+  const loadTestData = () => {
+    setExtractedInfoArray(TEST_DATA);
+    setProgress(100);
+    addDebugLog('テストデータを読み込みました');
+    
+    // API使用状況のモックデータも設定
+    setApiUsage({
+      totalRequests: TEST_DATA.length,
+      inputTokens: 1000 * TEST_DATA.length,
+      outputTokens: 500 * TEST_DATA.length,
+      estimatedCost: (1000 * COST_PER_INPUT_TOKEN + 500 * COST_PER_OUTPUT_TOKEN) * TEST_DATA.length
+    });
+  };
+
   return (
     <div className="container mx-auto p-4 min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      <div className="fixed top-2 left-2 z-50 space-y-1">
+        <Badge variant="outline" className="bg-black/80 text-white block">
+          {debugInfo.version}
+        </Badge>
+        <Badge variant="outline" className="bg-blue-600/80 text-white block">
+          {debugInfo.branch}
+        </Badge>
+        <Badge variant="outline" className="bg-green-600/80 text-white block">
+          {debugInfo.developer}
+        </Badge>
+        <Button 
+          variant="outline" 
+          className="w-full bg-purple-600/80 text-white hover:bg-purple-700/80"
+          onClick={loadTestData}
+        >
+          テストデータ読込
+        </Button>
+      </div>
+
       <Card className="mb-6 shadow-lg">
         <CardHeader>
           <CardTitle className="text-2xl font-bold text-blue-800">
@@ -576,22 +716,36 @@ export default function ExtractTest() {
                 {renderComparisonTable()}
               </div>
 
-              <div className="space-y-4">
-                <h2 className="text-xl font-semibold text-blue-800">最終バージョン</h2>
-                <Card className="p-4">
-                  <PropertyListing propertyInfo={generateFinalVersion()} />
-                </Card>
-              </div>
+              {renderFinalVersionWithConfidence()}
 
               <div className="space-y-4">
                 <h2 className="text-xl font-semibold text-blue-800">個別の抽出結果</h2>
                 <div className="grid grid-cols-1 gap-4">
-                  {extractedInfoArray.map((info, index) => (
-                    <Card key={index} className="p-4">
-                      <h3 className="text-lg font-semibold mb-4">結果 #{index + 1}</h3>
-                      <PropertyListing propertyInfo={info} />
-                    </Card>
-                  ))}
+                  {extractedInfoArray.map((info, index) => {
+                    // 各抽出結果の一致率を計算
+                    const individualMatchRates = {};
+                    keyItems.forEach(key => {
+                      const otherValues = extractedInfoArray
+                        .filter((_, i) => i !== index)
+                        .map(otherInfo => formatValue(otherInfo[key]));
+                      const currentValue = formatValue(info[key]);
+                      const matchCount = otherValues.filter(v => v === currentValue).length;
+                      const matchRate = otherValues.length > 0 
+                        ? (matchCount / otherValues.length) * 100 
+                        : 100;
+                      individualMatchRates[key] = matchRate;
+                    });
+
+                    return (
+                      <Card key={index} className="p-4">
+                        <h3 className="text-lg font-semibold mb-4">結果 #{index + 1}</h3>
+                        <PropertyListing 
+                          propertyInfo={info} 
+                          matchRates={individualMatchRates}
+                        />
+                      </Card>
+                    );
+                  })}
                 </div>
               </div>
 
